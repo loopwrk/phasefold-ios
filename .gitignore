@@ -1,0 +1,7 @@
+.vercel
+node_modules/
+dist/
+.DS_Store
+Phasefold Research/
+CLAUDE.md
+*.bak*
