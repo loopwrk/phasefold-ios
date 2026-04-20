@@ -19,7 +19,7 @@
       <!-- Core -->
       <div class="section">
         <div class="section-title">Core</div>
-        <ParameterSlider label="Duration" v-model="p.dur" :min="5" :max="300" :step="1" suffix=" s" @info="showInfo" />
+        <ParameterSlider label="Duration" v-model="p.dur" :min="60" :max="300" :step="1" suffix=" s" @info="showInfo" />
         <ParameterSlider label="Base frequency" v-model="p.baseF0" :min="20" :max="220" :step="0.1"
           :suffix="` Hz (${noteName})`" @info="showInfo" />
         <ParameterSlider label="Voices per layer" v-model="p.voices" :min="1" :max="9" :step="1" @info="showInfo" />
@@ -29,8 +29,6 @@
       <!-- Temporal -->
       <details class="section" open>
         <summary class="section-title clickable">Temporal</summary>
-        <ParameterSlider label="Voice delay" v-model="p.voiceDelay" :min="0" :max="30" :step="0.5" suffix=" s"
-          @info="showInfo" />
         <!-- Breath state selector -->
         <div class="breath-control">
           <div class="param-header">
@@ -249,7 +247,7 @@ function buildParams(): SynthParams {
     harmonicEven: p.harmonicEven,
     harmonicOdd: p.harmonicOdd,
     combAmount: p.combAmount,
-    voiceDelay: p.voiceDelay,
+    voiceDelay: 20,
     breathRate: p.breathRate,
   };
 }

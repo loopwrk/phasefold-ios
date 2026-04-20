@@ -63,42 +63,33 @@ export function generateAudio(params: SynthParams): StereoAudio {
   const voiceDelaySamps = Math.floor(voiceDelay * sampleRate);
   const voiceFadeSamps = Math.floor(1.5 * sampleRate); // 1.5 s fade-in
   const voiceEmergeEnv = new Float64Array(N).fill(1);
-  if (voiceDelaySamps > 0) {
-    for (let i = 0; i < voiceDelaySamps && i < N; i++) {
-      voiceEmergeEnv[i] = 0;
-    }
-    const fadeEnd = Math.min(N, voiceDelaySamps + voiceFadeSamps);
-    const fadeLen = fadeEnd - voiceDelaySamps;
-    if (fadeLen > 0) {
-      for (let i = 0; i < fadeLen; i++) {
-        voiceEmergeEnv[voiceDelaySamps + i] = i / (fadeLen - 1 || 1);
-      }
-    }
+
+  for (let i = 0; i < voiceDelaySamps; i++) {
+    voiceEmergeEnv[i] = 0;
+  }
+  const fadeLen = voiceFadeSamps;
+  for (let i = 0; i < fadeLen; i++) {
+    voiceEmergeEnv[voiceDelaySamps + i] = i / (fadeLen - 1);
   }
 
   // ── 4. Base effects emergence envelope ────────
   // Provides the "one → many" experience: pure tone first, effects fade in
   const baseEffectsEnv = new Float64Array(N).fill(1);
   const pureToneVolEnv = new Float64Array(N).fill(1);
-  if (voiceDelaySamps > 0) {
-    const pureToneSamps = Math.floor(0.35 * voiceDelaySamps);
+  const pureToneSamps = Math.floor(0.35 * voiceDelaySamps);
 
-    // First 35 % of delay: pure tone (effects = 0)
-    for (let i = 0; i < pureToneSamps && i < N; i++) {
-      baseEffectsEnv[i] = 0;
-      pureToneVolEnv[i] = (i / (pureToneSamps || 1)) * 0.4;
-    }
+  // First 35 % of delay: pure tone (effects = 0)
+  for (let i = 0; i < pureToneSamps; i++) {
+    baseEffectsEnv[i] = 0;
+    pureToneVolEnv[i] = (i / pureToneSamps) * 0.4;
+  }
 
-    // Remaining 65 %: effects ramp 0 → 1, volume ramp 0.4 → 1.0
-    const effEnd = Math.min(N, voiceDelaySamps);
-    const effLen = effEnd - pureToneSamps;
-    if (effLen > 0) {
-      for (let i = 0; i < effLen; i++) {
-        const t = i / (effLen - 1 || 1);
-        baseEffectsEnv[pureToneSamps + i] = t;
-        pureToneVolEnv[pureToneSamps + i] = 0.4 + 0.6 * t;
-      }
-    }
+  // Remaining 65 %: effects ramp 0 → 1, volume ramp 0.4 → 1.0
+  const effLen = voiceDelaySamps - pureToneSamps;
+  for (let i = 0; i < effLen; i++) {
+    const t = i / (effLen - 1);
+    baseEffectsEnv[pureToneSamps + i] = t;
+    pureToneVolEnv[pureToneSamps + i] = 0.4 + 0.6 * t;
   }
 
   // ── 5. Seeded detune / phase ──────────────────
