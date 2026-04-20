@@ -73,7 +73,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
   }
 
   // ── 4. Base effects emergence envelope ────────
-  // Provides the "one → many" experience: pure tone first, effects fade in
+  // Provides the "one → many" experience: pure tone first, effects fade in.
+  // VoiceDelaySamps and all derived indices fit within N.
   const baseEffectsEnv = new Float64Array(N).fill(1);
   const pureToneVolEnv = new Float64Array(N).fill(1);
   const pureToneSamps = Math.floor(0.35 * voiceDelaySamps);

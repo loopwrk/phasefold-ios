@@ -247,7 +247,7 @@ function buildParams(): SynthParams {
     harmonicEven: p.harmonicEven,
     harmonicOdd: p.harmonicOdd,
     combAmount: p.combAmount,
-    voiceDelay: 20,
+    voiceDelay: Math.min(30, Math.max(10, 0.08 * p.dur)),
     breathRate: p.breathRate,
   };
 }
