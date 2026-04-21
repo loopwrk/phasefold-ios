@@ -27,8 +27,8 @@ export interface SynthParams {
 }
 
 export interface StereoAudio {
-  left: Float64Array;
-  right: Float64Array;
+  left: Float32Array;
+  right: Float32Array;
   sampleRate: number;
 }
 
@@ -46,8 +46,8 @@ export type WorkerResponse =
   | { type: "progress"; percent: number; section: string }
   | {
       type: "result";
-      left: Float64Array;
-      right: Float64Array;
+      left: Float32Array;
+      right: Float32Array;
       sampleRate: number;
     }
   | { type: "error"; message: string };

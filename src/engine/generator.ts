@@ -6,6 +6,11 @@
  *
  * Computation is synchronous but designed to run inside a Web Worker
  * so the main thread stays responsive.
+ *
+ * All buffers use Float32 for memory efficiency (halves allocation vs
+ * Float64) and faster ARM performance on iOS. Phase accumulators
+ * (phaseCum, cumMod, basePhaseAcc, binLPhase, binRPhase) remain as
+ * regular JS numbers (Float64) to avoid audible drift over long tracks.
  */
 
 export type ProgressCallback = (percent: number, section: string) => void;
@@ -49,8 +54,8 @@ export function generateAudio(
 
   // ── 1. Time axis ──────────────────────────────
   const N = Math.floor(sampleRate * dur);
-  const sampleTimes = new Float64Array(N);
-  const progress = new Float64Array(N);
+  const sampleTimes = new Float32Array(N);
+  const progress = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     sampleTimes[i] = i / sampleRate;
     progress[i] = i / (N - 1 || 1);
@@ -58,7 +63,7 @@ export function generateAudio(
 
   // ── 2. Convergence envelope ───────────────────
   // 1 → 0 over the piece; shape set by collapseCurve
-  const convGain = new Float64Array(N);
+  const convGain = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     convGain[i] = 1.0 - Math.pow(progress[i], collapseCurve);
   }
@@ -66,7 +71,7 @@ export function generateAudio(
   // ── 3. Voice emergence envelope ───────────────
   const voiceDelaySamps = Math.floor(voiceDelay * sampleRate);
   const voiceFadeSamps = Math.floor(1.5 * sampleRate); // 1.5 s fade-in
-  const voiceEmergeEnv = new Float64Array(N).fill(1);
+  const voiceEmergeEnv = new Float32Array(N).fill(1);
 
   for (let i = 0; i < voiceDelaySamps; i++) {
     voiceEmergeEnv[i] = 0;
@@ -79,8 +84,8 @@ export function generateAudio(
   // ── 4. Base effects emergence envelope ────────
   // Provides the "one → many" experience: pure tone first, effects fade in.
   // VoiceDelaySamps and all derived indices fit within N.
-  const baseEffectsEnv = new Float64Array(N).fill(1);
-  const pureToneVolEnv = new Float64Array(N).fill(1);
+  const baseEffectsEnv = new Float32Array(N).fill(1);
+  const pureToneVolEnv = new Float32Array(N).fill(1);
   const pureToneSamps = Math.floor(0.35 * voiceDelaySamps);
 
   // First 35 % of delay: pure tone (effects = 0)
@@ -105,7 +110,7 @@ export function generateAudio(
   const phase0 = rng.uniformArray(0, TWO_PI, voices);
 
   // ── 6. Breath oscillation ─────────────────────
-  const breath = new Float64Array(N);
+  const breath = new Float32Array(N);
   if (breathRate > 0) {
     for (let i = 0; i < N; i++) {
       const b = 0.5 * (1 + Math.sin(TWO_PI * breathRate * sampleTimes[i]));
@@ -122,7 +127,7 @@ export function generateAudio(
   // Floor raised to 0.65 to maintain ILD crossfeed above −15 dB binaural integrity threshold.
   // Fixed centre 0.70, depth ±0.05.
 
-  const stereoWidthLFO = new Float64Array(N);
+  const stereoWidthLFO = new Float32Array(N);
   const SW_CENTRE = 0.7;
   const SW_DEPTH = 0.05;
   for (let i = 0; i < N; i++) {
@@ -136,19 +141,19 @@ export function generateAudio(
   const Nc = Math.max(2, Math.floor(dur * CONTROL_HZ));
   const ctrlProgress = linspace(0, 1, Nc);
 
-  const convGainCtrl = new Float64Array(Nc);
+  const convGainCtrl = new Float32Array(Nc);
   for (let i = 0; i < Nc; i++) {
     convGainCtrl[i] = 1.0 - Math.pow(ctrlProgress[i], collapseCurve);
   }
 
-  const tiltAmplitude = new Float64Array(Nc);
+  const tiltAmplitude = new Float32Array(Nc);
   for (let i = 0; i < Nc; i++) {
     tiltAmplitude[i] = 0.08 * convGainCtrl[i];
   }
 
   // Evolve 2-state vector
-  const vState0 = new Float64Array(Nc); // "marked" dimension
-  const vState1 = new Float64Array(Nc);
+  const vState0 = new Float32Array(Nc); // "marked" dimension
+  const vState1 = new Float32Array(Nc);
   let state: [number, number] = stabilizeState([0, 1]);
   vState0[0] = state[0];
   vState1[0] = state[1];
@@ -167,7 +172,7 @@ export function generateAudio(
 
   // ── 8. Control → audio upsample ───────────────
   // Activity envelope: tanh mapping of marked state, low-pass filtered
-  const activityCtrl = new Float64Array(Nc);
+  const activityCtrl = new Float32Array(Nc);
   for (let i = 0; i < Nc; i++) {
     const m = Math.max(-8, Math.min(8, vState0[i]));
     activityCtrl[i] = 0.5 * (1 + Math.tanh(0.5 * 3.0 * m));
@@ -184,8 +189,8 @@ export function generateAudio(
   onProgress?.(18, "State evolution + upsample");
 
   // ── 9. Audio-rate envelopes ───────────────────
-  const baseF = new Float64Array(N);
-  const ampEnv = new Float64Array(N);
+  const baseF = new Float32Array(N);
+  const ampEnv = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const freqDev = 0.01 * (markedState[i] - meanMarked) * baseEffectsEnv[i];
     ampEnv[i] = 0.6 + 0.4 * activityEnv[i];
@@ -194,7 +199,7 @@ export function generateAudio(
 
   // ── 10. Per-layer control envelopes ───────────
   const LAYER_SLOWDOWN = 0.75;
-  const layerCtrl: Float64Array[] = [];
+  const layerCtrl: Float32Array[] = [];
   for (let ell = 0; ell < layers; ell++) {
     const fcEll = 1.0 / (1.0 + LAYER_SLOWDOWN * ell);
     const envCtrl = smoothEnvelope(activityCtrlSmooth, fcEll, CONTROL_HZ);
@@ -203,7 +208,7 @@ export function generateAudio(
 
   // Shared slow drift phase
   const driftCoeff = 0.02 * ((layers * (layers + 1)) / 2.0);
-  const driftPhase = new Float64Array(N);
+  const driftPhase = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     driftPhase[i] = TWO_PI * driftCoeff * convGain[i] * sampleTimes[i];
   }
@@ -223,7 +228,7 @@ export function generateAudio(
   onProgress?.(25, "Layer envelopes");
 
   // ── 11. Layer synthesis ───────────────────────
-  const layerSums: Float64Array[] = [];
+  const layerSums: Float32Array[] = [];
 
   for (let ell = 0; ell < layers; ell++) {
     const ctrlL = layerCtrl[ell];
@@ -231,7 +236,7 @@ export function generateAudio(
     const amScale = amIndex0 * Math.pow(betaAm, ell);
 
     // FM phase modulation for this layer (1-D cumsum)
-    const phaseModL = new Float64Array(N);
+    const phaseModL = new Float32Array(N);
     let cumMod = 0;
     for (let i = 0; i < N; i++) {
       const fmL = Math.min(fmScale * convGain[i], 0.6);
@@ -240,7 +245,7 @@ export function generateAudio(
     }
 
     // Sum across voices (one voice at a time to save memory)
-    const midsumL = new Float64Array(N);
+    const midsumL = new Float32Array(N);
 
     for (let v = 0; v < voices; v++) {
       const centV = cents[v];
@@ -272,7 +277,7 @@ export function generateAudio(
   }
 
   // ── 12. Collapse-aware layer weighting ────────
-  const mix = new Float64Array(N);
+  const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     let wSum = 0;
     let signal = 0;
@@ -324,7 +329,7 @@ export function generateAudio(
     const d2 = Math.floor(sampleRate / (baseF0 * 1.5));
     const d3 = Math.floor(sampleRate / (baseF0 * 2.0));
 
-    const acc = new Float64Array(N);
+    const acc = new Float32Array(N);
     if (d1 > 0) {
       for (let i = 0; i < N - d1; i++) acc[i] += mix[i + d1];
     }
@@ -354,14 +359,14 @@ export function generateAudio(
   onProgress?.(78, "Tone + harmonics + comb");
 
   // ── 16. Stereo + binaural ─────────────────────
-  const L = new Float64Array(N);
-  const R = new Float64Array(N);
+  const L = new Float32Array(N);
+  const R = new Float32Array(N);
 
   // Binaural oscillators (phase-accumulated for stability)
   // Binaural delta is gently modulated by the breath-rate LFO (±10% of set value)
   // creating a slowly drifting beat frequency that mirrors the spatial breath cycle.
-  const bL = new Float64Array(N);
-  const bR = new Float64Array(N);
+  const bL = new Float32Array(N);
+  const bR = new Float32Array(N);
   let binLPhase = 0;
   let binRPhase = 0;
   const BD_DEPTH = 0.1; // 10% of binauralDeltaHz0
@@ -379,7 +384,7 @@ export function generateAudio(
 
   // Stereo delay (48 samples ≈ 1.1 ms)
   const delaySamps = 48;
-  const delayed = new Float64Array(N);
+  const delayed = new Float32Array(N);
   for (let i = delaySamps; i < N; i++) {
     delayed[i] = mix[i - delaySamps];
   }
@@ -417,7 +422,7 @@ export function generateAudio(
 
   // ── 18. Collapse detection ────────────────────
   // Measure control-rate d/dt of the activity envelope
-  const dCtrl = new Float64Array(Nc);
+  const dCtrl = new Float32Array(Nc);
   for (let i = 1; i < Nc; i++) {
     dCtrl[i] =
       Math.abs(activityCtrlSmooth[i] - activityCtrlSmooth[i - 1]) * CONTROL_HZ;
@@ -450,8 +455,8 @@ export function generateAudio(
   const useFullLength = stopIdx < minLength;
   const outLen = useFullLength ? N : stopIdx;
 
-  const finalL = new Float64Array(outLen);
-  const finalR = new Float64Array(outLen);
+  const finalL = new Float32Array(outLen);
+  const finalR = new Float32Array(outLen);
   finalL.set(L.subarray(0, outLen));
   finalR.set(R.subarray(0, outLen));
 

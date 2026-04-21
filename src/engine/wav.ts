@@ -1,13 +1,13 @@
 /**
  * Phasefold — WAV encoder
  *
- * Encodes stereo Float64 audio into a 16-bit PCM WAV ArrayBuffer
+ * Encodes stereo Float32 audio into a 16-bit PCM WAV ArrayBuffer
  * suitable for download or Capacitor Filesystem writes.
  */
 
 export function encodeWav(
-  left: Float64Array,
-  right: Float64Array,
+  left: Float32Array,
+  right: Float32Array,
   sampleRate: number,
 ): ArrayBuffer {
   const numSamples = left.length;

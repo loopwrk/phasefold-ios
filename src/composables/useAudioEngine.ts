@@ -13,7 +13,12 @@
  */
 
 import { ref, shallowRef } from "vue";
-import type { SynthParams, StereoAudio, WorkerRequest, WorkerResponse } from "../engine/types";
+import type {
+  SynthParams,
+  StereoAudio,
+  WorkerRequest,
+  WorkerResponse,
+} from "../engine/types";
 import { encodeWav } from "../engine/wav";
 
 export function useAudioEngine() {
@@ -114,13 +119,8 @@ export function useAudioEngine() {
     const ac = ensureContext();
     const buf = ac.createBuffer(2, audio.left.length, audio.sampleRate);
 
-    // Web Audio wants Float32; copy from our Float64 buffers
-    const ch0 = buf.getChannelData(0);
-    const ch1 = buf.getChannelData(1);
-    for (let i = 0; i < audio.left.length; i++) {
-      ch0[i] = audio.left[i];
-      ch1[i] = audio.right[i];
-    }
+    buf.copyToChannel(new Float32Array(audio.left), 0);
+    buf.copyToChannel(new Float32Array(audio.right), 1);
 
     source = ac.createBufferSource();
     source.buffer = buf;

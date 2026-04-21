@@ -31,14 +31,14 @@ export class SeededRNG {
     return mu + sigma * z;
   }
 
-  normalArray(mu: number, sigma: number, n: number): Float64Array {
-    const a = new Float64Array(n);
+  normalArray(mu: number, sigma: number, n: number): Float32Array {
+    const a = new Float32Array(n);
     for (let i = 0; i < n; i++) a[i] = this.normal(mu, sigma);
     return a;
   }
 
-  uniformArray(lo: number, hi: number, n: number): Float64Array {
-    const a = new Float64Array(n);
+  uniformArray(lo: number, hi: number, n: number): Float32Array {
+    const a = new Float32Array(n);
     const range = hi - lo;
     for (let i = 0; i < n; i++) a[i] = lo + range * this.next();
     return a;
@@ -49,8 +49,8 @@ export class SeededRNG {
 // Array helpers  (minimal NumPy equivalents)
 // ────────────────────────────────────────────────
 
-export function linspace(start: number, end: number, n: number): Float64Array {
-  const a = new Float64Array(n);
+export function linspace(start: number, end: number, n: number): Float32Array {
+  const a = new Float32Array(n);
   if (n <= 1) {
     a[0] = start;
     return a;
@@ -65,11 +65,11 @@ export function linspace(start: number, end: number, n: number): Float64Array {
  * Assumes xp is monotonically increasing.
  */
 export function interp(
-  x: Float64Array,
-  xp: Float64Array,
-  fp: Float64Array,
-): Float64Array {
-  const out = new Float64Array(x.length);
+  x: Float32Array,
+  xp: Float32Array,
+  fp: Float32Array,
+): Float32Array {
+  const out = new Float32Array(x.length);
   let j = 0;
   for (let i = 0; i < x.length; i++) {
     // Advance j so xp[j] <= x[i] < xp[j+1]
@@ -90,17 +90,17 @@ export function interp(
  * where alpha = 1 - exp(-2 pi fc / sr)
  */
 export function smoothEnvelope(
-  input: Float64Array,
+  input: Float32Array,
   cutoffHz: number,
   sampleRate: number,
   state = 0,
-): Float64Array {
+): Float32Array {
   if (input.length === 0) return input;
   if (!isFinite(cutoffHz) || cutoffHz <= 0 || cutoffHz >= 0.5 * sampleRate) {
-    return Float64Array.from(input);
+    return Float32Array.from(input);
   }
   const alpha = 1.0 - Math.exp((-2.0 * Math.PI * cutoffHz) / sampleRate);
-  const out = new Float64Array(input.length);
+  const out = new Float32Array(input.length);
   let acc = state;
   for (let i = 0; i < input.length; i++) {
     acc += alpha * (input[i] - acc);
