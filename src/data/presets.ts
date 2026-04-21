@@ -188,6 +188,24 @@ export const PRESETS: Record<string, PresetValues> = {
     collapseCurve: 1.5,
   },
 
+  // 9.5 Hz: mid-alpha, associated with grounded meditative states.
+  // Low base frequency (G2) and rich odd harmonics produce a warm,
+  // deep timbre; slow restorative breath and high layer count give
+  // the sound a sustained, enveloping quality over 7.5 minutes.
+  "Alpha - Deep Ember": {
+    dur: 450,
+    baseF0: 96.0,
+    voices: 7,
+    layers: 4,
+    breathRate: 0.012, // Restorative
+    binauralDeltaHz0: 9.5,
+    binauralAmount: 0.35,
+    harmonicEven: 0.18,
+    harmonicOdd: 0.30,
+    combAmount: 0.12,
+    collapseCurve: 2.5,
+  },
+
   "Beta - Wolf Moon": {
     dur: 120,
     baseF0: 196.0,
