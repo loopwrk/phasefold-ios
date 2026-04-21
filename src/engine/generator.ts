@@ -4,10 +4,11 @@
  * Port of the Python generate_app() function.
  * Every section is annotated with the corresponding Python comment
  *
- * All computation is synchronous.
+ * Computation is synchronous but designed to run inside a Web Worker
+ * so the main thread stays responsive.
  */
 
-// TODO: For long durations (>60 s) possibly delegate to web workers to keep the UI responsive
+export type ProgressCallback = (percent: number, section: string) => void;
 
 import type { SynthParams, StereoAudio } from "./types";
 import { CONTROL_HZ } from "./types";
@@ -22,7 +23,10 @@ import {
 
 const TWO_PI = 2 * Math.PI;
 
-export function generateAudio(params: SynthParams): StereoAudio {
+export function generateAudio(
+  params: SynthParams,
+  onProgress?: ProgressCallback,
+): StereoAudio {
   const {
     dur,
     sampleRate,
@@ -93,6 +97,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
     pureToneVolEnv[pureToneSamps + i] = 0.4 + 0.6 * t;
   }
 
+  onProgress?.(5, "Envelopes");
+
   // ── 5. Seeded detune / phase ──────────────────
   const rng = new SeededRNG(seed);
   const cents = rng.normalArray(0, 12, voices); // ±12 cents typical
@@ -123,6 +129,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
     stereoWidthLFO[i] =
       SW_CENTRE - SW_DEPTH * Math.sin(TWO_PI * breathRate * sampleTimes[i]);
   }
+
+  onProgress?.(10, "Breath + stereo LFO");
 
   // ── 7. Control-rate recursion (60 Hz) ─────────
   const Nc = Math.max(2, Math.floor(dur * CONTROL_HZ));
@@ -173,6 +181,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
   for (let i = 0; i < N; i++) meanMarked += markedState[i];
   meanMarked /= N;
 
+  onProgress?.(18, "State evolution + upsample");
+
   // ── 9. Audio-rate envelopes ───────────────────
   const baseF = new Float64Array(N);
   const ampEnv = new Float64Array(N);
@@ -209,6 +219,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
 
   const alphaFm = 0.82;
   const betaAm = 0.88;
+
+  onProgress?.(25, "Layer envelopes");
 
   // ── 11. Layer synthesis ───────────────────────
   const layerSums: Float64Array[] = [];
@@ -253,6 +265,10 @@ export function generateAudio(params: SynthParams): StereoAudio {
     for (let i = 0; i < N; i++) midsumL[i] /= voices;
 
     layerSums.push(midsumL);
+    onProgress?.(
+      25 + Math.round(40 * ((ell + 1) / layers)),
+      `Layer ${ell + 1}/${layers}`,
+    );
   }
 
   // ── 12. Collapse-aware layer weighting ────────
@@ -267,6 +283,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
     }
     mix[i] = signal / Math.max(1e-9, wSum);
   }
+
+  onProgress?.(68, "Layer weighting");
 
   // ── 13. Base tone ─────────────────────────────
   let basePhaseAcc = 0;
@@ -333,6 +351,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
     }
   }
 
+  onProgress?.(78, "Tone + harmonics + comb");
+
   // ── 16. Stereo + binaural ─────────────────────
   const L = new Float64Array(N);
   const R = new Float64Array(N);
@@ -378,6 +398,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
     L[i] = lBase + stEnv * delayed[i];
     R[i] = rBase - stEnv * delayed[i];
   }
+
+  onProgress?.(88, "Stereo + binaural");
 
   // ── 17. Fade in (0.5 s) ──────────────────────
   const fadeInSamps = Math.floor(0.5 * sampleRate);
@@ -433,6 +455,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
   finalL.set(L.subarray(0, outLen));
   finalR.set(R.subarray(0, outLen));
 
+  onProgress?.(95, "Collapse detection");
+
   // ── 20. Fade out (equal-power, 1 s) ──────────
   const fadeOutSamps = Math.max(
     1,
@@ -455,6 +479,8 @@ export function generateAudio(params: SynthParams): StereoAudio {
     finalL[i] *= gain;
     finalR[i] *= gain;
   }
+
+  onProgress?.(100, "Complete");
 
   return { left: finalL, right: finalR, sampleRate };
 }

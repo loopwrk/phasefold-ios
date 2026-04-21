@@ -34,3 +34,20 @@ export interface StereoAudio {
 
 export const AUDIO_SR = 44100;
 export const CONTROL_HZ = 60.0;
+
+// ── Web Worker message protocol ────────────────
+
+export type WorkerRequest = {
+  type: "generate";
+  params: SynthParams;
+};
+
+export type WorkerResponse =
+  | { type: "progress"; percent: number; section: string }
+  | {
+      type: "result";
+      left: Float64Array;
+      right: Float64Array;
+      sampleRate: number;
+    }
+  | { type: "error"; message: string };

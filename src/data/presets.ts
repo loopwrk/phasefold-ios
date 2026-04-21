@@ -293,20 +293,6 @@ export const PRESETS: Record<string, PresetValues> = {
     collapseCurve: 2.2,
   },
 
-  "Gamma - Coral Bloom": {
-    dur: 323,
-    baseF0: 164.8,
-    voices: 6,
-    layers: 5,
-    breathRate: 0.05,
-    binauralDeltaHz0: 47.3,
-    binauralAmount: 0.6,
-    harmonicEven: 0.52,
-    harmonicOdd: 0.55,
-    combAmount: 0.42,
-    collapseCurve: 1.3,
-  },
-
   "Gamma - Oceanic Thoughts": {
     dur: 300,
     baseF0: 136.1,

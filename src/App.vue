@@ -19,7 +19,7 @@
       <!-- Core -->
       <div class="section">
         <div class="section-title">Core</div>
-        <ParameterSlider label="Duration" v-model="p.dur" :min="60" :max="300" :step="1" suffix=" s" @info="showInfo" />
+        <ParameterSlider label="Duration" v-model="p.dur" :min="60" :max="600" :step="1" suffix=" s" @info="showInfo" />
         <ParameterSlider label="Base frequency" v-model="p.baseF0" :min="20" :max="220" :step="0.1"
           :suffix="` Hz (${noteName})`" @info="showInfo" />
         <ParameterSlider label="Voices per layer" v-model="p.voices" :min="1" :max="9" :step="1" @info="showInfo" />
@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, watchEffect } from "vue";
 import ParameterSlider from "./components/ParameterSlider.vue";
 import { useAudioEngine } from "./composables/useAudioEngine";
 import { PRESETS, type PresetValues } from "./data/presets";
@@ -145,6 +145,7 @@ const {
   getDuration,
   isPlaying,
   isGenerating,
+  generationProgress,
   currentAudio,
   playbackTime,
 } = useAudioEngine();
@@ -254,12 +255,22 @@ function buildParams(): SynthParams {
 
 async function onGenerate() {
   status.value = "Generating\u2026";
+
+  // Reactive progress updates while worker runs
+  const stopWatch = watchEffect(() => {
+    if (isGenerating.value && generationProgress.value > 0) {
+      status.value = `Generating\u2026 ${generationProgress.value}%`;
+    }
+  });
+
   try {
     const audio = await generate(buildParams());
     const dur = audio.left.length / audio.sampleRate;
     status.value = `Generated ${dur.toFixed(1)} s at ${audio.sampleRate} Hz`;
   } catch (e: any) {
     status.value = `Error: ${e.message}`;
+  } finally {
+    stopWatch();
   }
 }
 

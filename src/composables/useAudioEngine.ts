@@ -1,7 +1,11 @@
 /**
  * Phasefold — Vue composable for audio generation + playback
  *
- * Wraps the generator and Web Audio API into a reactive interface.
+ * Wraps the generator (via Web Worker) and Web Audio API into a
+ * reactive interface.
+ *
+ * Generation runs in a dedicated Web Worker so the main thread
+ * stays responsive regardless of track length.
  *
  * iOS note: AudioContext must be created / resumed inside a user-gesture
  * handler.  The play() and generate() calls are always user-initiated
@@ -9,8 +13,7 @@
  */
 
 import { ref, shallowRef } from "vue";
-import type { SynthParams, StereoAudio } from "../engine/types";
-import { generateAudio } from "../engine/generator";
+import type { SynthParams, StereoAudio, WorkerRequest, WorkerResponse } from "../engine/types";
 import { encodeWav } from "../engine/wav";
 
 export function useAudioEngine() {
@@ -22,6 +25,7 @@ export function useAudioEngine() {
 
   const isPlaying = ref(false);
   const isGenerating = ref(false);
+  const generationProgress = ref(0);
   const currentAudio = shallowRef<StereoAudio | null>(null);
   const playbackTime = ref(0);
 
@@ -42,20 +46,62 @@ export function useAudioEngine() {
 
   /**
    * Generate audio from parameters.
-   * Returns immediately with a reactive isGenerating flag.
-   * A tiny setTimeout lets the UI paint the "Generating…" state.
+   * Spawns a Web Worker, returns a promise that resolves with the
+   * generated StereoAudio. Progress is exposed via generationProgress ref.
    */
-  async function generate(params: SynthParams): Promise<StereoAudio> {
+  function generate(params: SynthParams): Promise<StereoAudio> {
     isGenerating.value = true;
-    try {
-      // Yield to the event loop so the UI can show a loading state
-      await new Promise((r) => setTimeout(r, 50));
-      const audio = generateAudio(params);
-      currentAudio.value = audio;
-      return audio;
-    } finally {
-      isGenerating.value = false;
-    }
+    generationProgress.value = 0;
+
+    return new Promise<StereoAudio>((resolve, reject) => {
+      const worker = new Worker(
+        new URL("../engine/audio.worker.ts", import.meta.url),
+        { type: "module" },
+      );
+
+      worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+        const msg = e.data;
+
+        switch (msg.type) {
+          case "progress":
+            generationProgress.value = msg.percent;
+            break;
+
+          case "result": {
+            // Reconstruct StereoAudio from transferred buffers
+            const audio: StereoAudio = {
+              left: msg.left,
+              right: msg.right,
+              sampleRate: msg.sampleRate,
+            };
+            currentAudio.value = audio;
+            isGenerating.value = false;
+            generationProgress.value = 100;
+            worker.terminate();
+            resolve(audio);
+            break;
+          }
+
+          case "error":
+            isGenerating.value = false;
+            generationProgress.value = 0;
+            worker.terminate();
+            reject(new Error(msg.message));
+            break;
+        }
+      };
+
+      worker.onerror = (e) => {
+        isGenerating.value = false;
+        generationProgress.value = 0;
+        worker.terminate();
+        reject(new Error(e.message || "Worker failed"));
+      };
+
+      // Send params to the worker
+      const request: WorkerRequest = { type: "generate", params };
+      worker.postMessage(request);
+    });
   }
 
   /** Start playback from startTime (seconds). */
@@ -146,6 +192,7 @@ export function useAudioEngine() {
     getDuration,
     isPlaying,
     isGenerating,
+    generationProgress,
     currentAudio,
     playbackTime,
   };
