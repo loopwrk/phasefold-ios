@@ -15,7 +15,6 @@ export interface SynthParams {
   seed: number; // PRNG seed for detune / phase
   fmIndex0: number; // initial FM modulation depth
   amIndex0: number; // initial AM modulation depth
-  collapseCurve: number; // exponent controlling convergence shape
   binauralDeltaHz0: number; // initial binaural beat delta
   binauralAmount: number; // binaural mix level
   overtonePower: number; // harmonic decay exponent

@@ -45,8 +45,6 @@
             </button>
           </div>
         </div>
-        <ParameterSlider label="Collapse curve" v-model="p.collapseCurve" :min="1.2" :max="3.5" :step="0.05"
-          @info="showInfo" />
       </details>
 
       <!-- Spatial -->
@@ -241,7 +239,6 @@ function buildParams(): SynthParams {
     seed: 2025,
     fmIndex0: 1.6,
     amIndex0: 0.35,
-    collapseCurve: p.collapseCurve,
     binauralDeltaHz0: p.binauralDeltaHz0,
     binauralAmount: p.binauralAmount,
     overtonePower: 1.3,
@@ -318,8 +315,6 @@ const PARAM_INFO: Record<string, string> = {
     "Base tone starts alone; voices fade in after this delay. Creates an \u201carriving\u201d texture.",
   "Breath rate":
     "Sets the pace of the spatial breathing cycle. Also gently modulates the binaural beat frequency for a slowly drifting entrainment effect.",
-  "Collapse curve":
-    "How fast everything comes to rest. 1.5\u20133.0 is musical. Higher holds motion longer.",
   "Binaural mix": "How much binaural bed is mixed under the main signal.",
   "Even harmonics":
     "Adds round/sweet harmonic colour on top of the main tone (Chebyshev T\u2082).",

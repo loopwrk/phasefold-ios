@@ -41,7 +41,6 @@ export function generateAudio(
     seed,
     fmIndex0,
     amIndex0,
-    collapseCurve,
     binauralDeltaHz0,
     binauralAmount,
     overtonePower,
@@ -52,7 +51,36 @@ export function generateAudio(
     breathRate,
   } = params;
 
-  // ── 1. Time axis ──────────────────────────────
+  // ── 1. Collapse curve (duration-adaptive) ─────
+  // Computed from session duration using a log-scaled formula calibrated
+  // to research-backed ranges (see collapse-curve-rationale.docx):
+  //   Short  (60-120s):  1.2-1.8 - begin descent early for perceptible arc
+  //   Medium (120-300s): 1.5-2.5 - balanced matching/guiding phases
+  //   Long   (300-600s): 2.0-3.5 - hold complexity, slow late convergence
+  //
+  // The absolute time spent in the transition phase matters more to the
+  // nervous system than the mathematical shape of the curve, so longer
+  // sessions get higher exponents automatically.
+  //
+  // TODO: Revisit collapse curve interaction with other parameters
+  // (binaural delta band, FM/AM depth, voice count) for more nuanced
+  // therapeutic shaping. Multi-parameter coupling could improve outcomes
+  // for specific use cases (e.g. sleep induction vs focused attention).
+  // See collapse-curve-rationale.docx sections 5 and 7.
+  const COLLAPSE_BASE = 1.5;
+  const COLLAPSE_SCALE = 0.6;
+  const COLLAPSE_REFERENCE_DUR = 60;
+  const COLLAPSE_MIN = 1.2;
+  const COLLAPSE_MAX = 3.5;
+  const collapseCurve = Math.min(
+    COLLAPSE_MAX,
+    Math.max(
+      COLLAPSE_MIN,
+      COLLAPSE_BASE + COLLAPSE_SCALE * Math.log(dur / COLLAPSE_REFERENCE_DUR),
+    ),
+  );
+
+  // ── 2. Time axis ──────────────────────────────
   const N = Math.floor(sampleRate * dur);
   const sampleTimes = new Float32Array(N);
   const progress = new Float32Array(N);
@@ -61,14 +89,14 @@ export function generateAudio(
     progress[i] = i / (N - 1 || 1);
   }
 
-  // ── 2. Convergence envelope ───────────────────
+  // ── 3. Convergence envelope ───────────────────
   // 1 → 0 over the piece; shape set by collapseCurve
   const convGain = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     convGain[i] = 1.0 - Math.pow(progress[i], collapseCurve);
   }
 
-  // ── 3. Voice emergence envelope ───────────────
+  // ── 4. Voice emergence envelope ───────────────
   const voiceDelaySamps = Math.floor(voiceDelay * sampleRate);
   const voiceFadeSamps = Math.floor(1.5 * sampleRate); // 1.5 s fade-in
   const voiceEmergeEnv = new Float32Array(N).fill(1);
@@ -81,7 +109,7 @@ export function generateAudio(
     voiceEmergeEnv[voiceDelaySamps + i] = i / (fadeLen - 1);
   }
 
-  // ── 4. Base effects emergence envelope ────────
+  // ── 5. Base effects emergence envelope ────────
   // Provides the "one → many" experience: pure tone first, effects fade in.
   // VoiceDelaySamps and all derived indices fit within N.
   const baseEffectsEnv = new Float32Array(N).fill(1);
@@ -104,12 +132,12 @@ export function generateAudio(
 
   onProgress?.(5, "Envelopes");
 
-  // ── 5. Seeded detune / phase ──────────────────
+  // ── 6. Seeded detune / phase ──────────────────
   const rng = new SeededRNG(seed);
   const cents = rng.normalArray(0, 12, voices); // ±12 cents typical
   const phase0 = rng.uniformArray(0, TWO_PI, voices);
 
-  // ── 6. Breath oscillation ─────────────────────
+  // ── 7. Breath oscillation ─────────────────────
   const breath = new Float32Array(N);
   if (breathRate > 0) {
     for (let i = 0; i < N; i++) {
@@ -137,7 +165,7 @@ export function generateAudio(
 
   onProgress?.(10, "Breath + stereo LFO");
 
-  // ── 7. Control-rate recursion (60 Hz) ─────────
+  // ── 8. Control-rate recursion (60 Hz) ─────────
   const Nc = Math.max(2, Math.floor(dur * CONTROL_HZ));
   const ctrlProgress = linspace(0, 1, Nc);
 
@@ -170,7 +198,7 @@ export function generateAudio(
     vState1[i] = state[1];
   }
 
-  // ── 8. Control → audio upsample ───────────────
+  // ── 9. Control → audio upsample ───────────────
   // Activity envelope: tanh mapping of marked state, low-pass filtered
   const activityCtrl = new Float32Array(Nc);
   for (let i = 0; i < Nc; i++) {
@@ -188,7 +216,7 @@ export function generateAudio(
 
   onProgress?.(18, "State evolution + upsample");
 
-  // ── 9. Audio-rate envelopes ───────────────────
+  // ── 10. Audio-rate envelopes ──────────────────
   const baseF = new Float32Array(N);
   const ampEnv = new Float32Array(N);
   for (let i = 0; i < N; i++) {
@@ -197,7 +225,7 @@ export function generateAudio(
     baseF[i] = baseF0 * (1.0 + freqDev);
   }
 
-  // ── 10. Per-layer control envelopes ───────────
+  // ── 11. Per-layer control envelopes ───────────
   const LAYER_SLOWDOWN = 0.75;
   const layerCtrl: Float32Array[] = [];
   for (let ell = 0; ell < layers; ell++) {
@@ -227,7 +255,7 @@ export function generateAudio(
 
   onProgress?.(25, "Layer envelopes");
 
-  // ── 11. Layer synthesis ───────────────────────
+  // ── 12. Layer synthesis ───────────────────────
   const layerSums: Float32Array[] = [];
 
   for (let ell = 0; ell < layers; ell++) {
@@ -276,7 +304,7 @@ export function generateAudio(
     );
   }
 
-  // ── 12. Collapse-aware layer weighting ────────
+  // ── 13. Collapse-aware layer weighting ────────
   const mix = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     let wSum = 0;
@@ -291,7 +319,7 @@ export function generateAudio(
 
   onProgress?.(68, "Layer weighting");
 
-  // ── 13. Base tone ─────────────────────────────
+  // ── 14. Base tone ─────────────────────────────
   let basePhaseAcc = 0;
   for (let i = 0; i < N; i++) {
     basePhaseAcc += (TWO_PI * baseF0) / sampleRate;
@@ -312,7 +340,7 @@ export function generateAudio(
     mix[i] = Math.tanh(0.9 * mix[i]);
   }
 
-  // ── 14. Chebyshev harmonics (even T2 / odd T3) ─
+  // ── 15. Chebyshev harmonics (even T2 / odd T3) ─
   for (let i = 0; i < N; i++) {
     const x = Math.max(-1, Math.min(1, mix[i]));
     const even = 2 * x * x - 1;
@@ -323,7 +351,7 @@ export function generateAudio(
     );
   }
 
-  // ── 15. Comb filter ───────────────────────────
+  // ── 16. Comb filter ───────────────────────────
   if (combAmount > 0) {
     const d1 = Math.floor(sampleRate / baseF0);
     const d2 = Math.floor(sampleRate / (baseF0 * 1.5));
@@ -358,7 +386,7 @@ export function generateAudio(
 
   onProgress?.(78, "Tone + harmonics + comb");
 
-  // ── 16. Stereo + binaural ─────────────────────
+  // ── 17. Stereo + binaural ─────────────────────
   const L = new Float32Array(N);
   const R = new Float32Array(N);
 
@@ -406,7 +434,7 @@ export function generateAudio(
 
   onProgress?.(88, "Stereo + binaural");
 
-  // ── 17. Fade in (0.5 s) ──────────────────────
+  // ── 18. Fade in (0.5 s) ──────────────────────
   const fadeInSamps = Math.floor(0.5 * sampleRate);
   for (let i = 0; i < fadeInSamps && i < N; i++) {
     const f = i / (fadeInSamps - 1 || 1);
@@ -420,7 +448,7 @@ export function generateAudio(
     R[i] *= pureToneVolEnv[i];
   }
 
-  // ── 18. Collapse detection ────────────────────
+  // ── 19. Collapse detection ────────────────────
   // Measure control-rate d/dt of the activity envelope
   const dCtrl = new Float32Array(Nc);
   for (let i = 1; i < Nc; i++) {
@@ -444,7 +472,7 @@ export function generateAudio(
   const stopT = ctrlProgress[stopCtrlIdx];
   let stopIdx = Math.max(1, Math.min(Math.round(stopT * N), N));
 
-  // ── 19. Decide final length ───────────────────
+  // ── 20. Decide final length ───────────────────
   // If collapse detection wants to trim more than 15 % off the
   // requested duration, honour the user's duration instead.
   // The state evolution often converges early while the musical
@@ -462,7 +490,7 @@ export function generateAudio(
 
   onProgress?.(95, "Collapse detection");
 
-  // ── 20. Fade out (equal-power, 1 s) ──────────
+  // ── 21. Fade out (equal-power, 1 s) ──────────
   const fadeOutSamps = Math.max(
     1,
     Math.min(Math.round(1.0 * sampleRate), finalL.length),
@@ -474,7 +502,7 @@ export function generateAudio(
     finalR[idx] *= f;
   }
 
-  // ── 21. Headroom normalise (−1.5 dBFS) ───────
+  // ── 22. Headroom normalise (−1.5 dBFS) ───────
   let peak = 1e-12;
   for (let i = 0; i < finalL.length; i++) {
     peak = Math.max(peak, Math.abs(finalL[i]), Math.abs(finalR[i]));
