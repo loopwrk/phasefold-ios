@@ -48,7 +48,7 @@
       </details>
 
       <!-- Spatial -->
-      <details class="section">
+      <details class="section" open>
         <summary class="section-title clickable">Spatial</summary>
 
         <!-- Mind state selector -->
