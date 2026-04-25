@@ -251,6 +251,10 @@ function buildParams(): SynthParams {
 }
 
 async function onGenerate() {
+  // Stop any current playback and reset scrubber
+  stopAudio();
+  playbackTime.value = 0;
+
   status.value = "Generating\u2026";
 
   // Reactive progress updates while worker runs
