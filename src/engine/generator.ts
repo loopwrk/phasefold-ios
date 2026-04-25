@@ -46,7 +46,6 @@ export function generateAudio(
     overtonePower,
     harmonicEven,
     harmonicOdd,
-    combAmount,
     voiceDelay,
     breathRate,
   } = params;
@@ -351,42 +350,9 @@ export function generateAudio(
     );
   }
 
-  // ── 16. Comb filter ───────────────────────────
-  if (combAmount > 0) {
-    const d1 = Math.floor(sampleRate / baseF0);
-    const d2 = Math.floor(sampleRate / (baseF0 * 1.5));
-    const d3 = Math.floor(sampleRate / (baseF0 * 2.0));
+  onProgress?.(78, "Tone + harmonics");
 
-    const acc = new Float32Array(N);
-    if (d1 > 0) {
-      for (let i = 0; i < N - d1; i++) acc[i] += mix[i + d1];
-    }
-    if (d2 > 0) {
-      for (let i = 0; i < N - d2; i++) acc[i] += mix[i + d2];
-    }
-    if (d3 > 0) {
-      for (let i = 0; i < N - d3; i++) acc[i] += mix[i + d3];
-    }
-
-    // 20 ms fade-in on acc to prevent onset clicks
-    const fadeLen = Math.min(Math.floor(0.02 * sampleRate), N);
-    if (fadeLen > 1) {
-      for (let i = 0; i < fadeLen; i++) acc[i] *= i / (fadeLen - 1);
-    }
-
-    for (let i = 0; i < N; i++) {
-      const aenv = Math.pow(convGain[i], overtonePower);
-      const be = baseEffectsEnv[i];
-      mix[i] = Math.tanh(
-        (1.0 - combAmount * 3.0 * aenv * be) * mix[i] +
-          combAmount * aenv * be * acc[i],
-      );
-    }
-  }
-
-  onProgress?.(78, "Tone + harmonics + comb");
-
-  // ── 17. Stereo + binaural ─────────────────────
+  // ── 16. Stereo + binaural ─────────────────────
   const L = new Float32Array(N);
   const R = new Float32Array(N);
 
@@ -434,7 +400,7 @@ export function generateAudio(
 
   onProgress?.(88, "Stereo + binaural");
 
-  // ── 18. Fade in (0.5 s) ──────────────────────
+  // ── 17. Fade in (0.5 s) ──────────────────────
   const fadeInSamps = Math.floor(0.5 * sampleRate);
   for (let i = 0; i < fadeInSamps && i < N; i++) {
     const f = i / (fadeInSamps - 1 || 1);
@@ -448,7 +414,7 @@ export function generateAudio(
     R[i] *= pureToneVolEnv[i];
   }
 
-  // ── 19. Collapse detection ────────────────────
+  // ── 18. Collapse detection ────────────────────
   // Measure control-rate d/dt of the activity envelope
   const dCtrl = new Float32Array(Nc);
   for (let i = 1; i < Nc; i++) {
@@ -472,7 +438,7 @@ export function generateAudio(
   const stopT = ctrlProgress[stopCtrlIdx];
   let stopIdx = Math.max(1, Math.min(Math.round(stopT * N), N));
 
-  // ── 20. Decide final length ───────────────────
+  // ── 19. Decide final length ───────────────────
   // If collapse detection wants to trim more than 15 % off the
   // requested duration, honour the user's duration instead.
   // The state evolution often converges early while the musical
@@ -490,7 +456,7 @@ export function generateAudio(
 
   onProgress?.(95, "Collapse detection");
 
-  // ── 21. Fade out (equal-power, 1 s) ──────────
+  // ── 20. Fade out (equal-power, 1 s) ──────────
   const fadeOutSamps = Math.max(
     1,
     Math.min(Math.round(1.0 * sampleRate), finalL.length),
@@ -502,7 +468,7 @@ export function generateAudio(
     finalR[idx] *= f;
   }
 
-  // ── 22. Headroom normalise (−1.5 dBFS) ───────
+  // ── 21. Headroom normalise (−1.5 dBFS) ───────
   let peak = 1e-12;
   for (let i = 0; i < finalL.length; i++) {
     peak = Math.max(peak, Math.abs(finalL[i]), Math.abs(finalR[i]));

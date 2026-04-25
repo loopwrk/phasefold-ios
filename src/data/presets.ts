@@ -8,7 +8,6 @@ export interface PresetValues {
   binauralAmount: number;
   harmonicEven: number;
   harmonicOdd: number;
-  combAmount: number;
 }
 
 export const PRESETS: Record<string, PresetValues> = {
@@ -22,7 +21,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.05,
     harmonicEven: 0.06,
     harmonicOdd: 0.1,
-    combAmount: 0.04,
   },
 
   "Delta - Sacred Ground": {
@@ -35,7 +33,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.18,
     harmonicEven: 0.12,
     harmonicOdd: 0.45,
-    combAmount: 0.4,
   },
 
   "Delta - Moonrise": {
@@ -48,7 +45,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.26,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.0,
   },
 
   "Delta - Crossing Currents": {
@@ -61,7 +57,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.02,
     harmonicOdd: 0.02,
-    combAmount: 0.0,
   },
 
   "Delta - Murmuration": {
@@ -74,7 +69,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.35,
     harmonicEven: 0.6,
     harmonicOdd: 0.6,
-    combAmount: 0.5,
   },
 
   "Theta - Ancient Forest": {
@@ -87,7 +81,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.28,
     harmonicEven: 0.22,
     harmonicOdd: 0.38,
-    combAmount: 0.22,
   },
 
   "Theta - Meandering River": {
@@ -100,7 +93,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.0,
   },
 
   "Theta - Gentle Rain": {
@@ -113,7 +105,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.5,
     harmonicEven: 0.05,
     harmonicOdd: 0.02,
-    combAmount: 0.06,
   },
 
   "Theta - Earth Resonance": {
@@ -126,7 +117,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.02,
     harmonicOdd: 0.02,
-    combAmount: 0.05,
   },
 
   "Alpha - Mandala": {
@@ -139,7 +129,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.5,
     harmonicEven: 0.25,
     harmonicOdd: 0.37,
-    combAmount: 0.15,
   },
 
   // 10 Hz: most clinically studied alpha frequency.
@@ -156,7 +145,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.4,
     harmonicEven: 0.1,
     harmonicOdd: 0.15,
-    combAmount: 0.08,
   },
 
   // 8.5 Hz: alpha-theta crossover, the hypnagogic boundary.
@@ -172,7 +160,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.3,
     harmonicEven: 0.0,
     harmonicOdd: 0.05,
-    combAmount: 0.02,
   },
 
   // 9.5 Hz: mid-alpha, associated with grounded meditative states.
@@ -189,7 +176,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.35,
     harmonicEven: 0.18,
     harmonicOdd: 0.3,
-    combAmount: 0.12,
   },
 
   "Beta - Wolf Moon": {
@@ -202,7 +188,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.28,
     harmonicOdd: 0.34,
-    combAmount: 0.15,
   },
 
   // 14 Hz: sensorimotor rhythm (SMR, 12–15 Hz).
@@ -219,7 +204,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.35,
     harmonicEven: 0.15,
     harmonicOdd: 0.12,
-    combAmount: 0.06,
   },
 
   // 18 Hz: mid-beta, studied in PMC12145584: beta BBT reduced anxiety,
@@ -235,7 +219,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.3,
     harmonicEven: 0.2,
     harmonicOdd: 0.18,
-    combAmount: 0.1,
   },
 
   "Gamma - Solar Wind": {
@@ -248,7 +231,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.04,
   },
 
   "Gamma - Golden Spiral": {
@@ -261,7 +243,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.02,
     harmonicOdd: 0.02,
-    combAmount: 0.06,
   },
 
   "Gamma - Interwoven": {
@@ -274,7 +255,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.15,
     harmonicOdd: 0.12,
-    combAmount: 0.1,
   },
 
   "Gamma - Bioluminescence": {
@@ -287,7 +267,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.52,
     harmonicOdd: 0.55,
-    combAmount: 0.42,
   },
 
   "Gamma - Oceanic Thoughts": {
@@ -300,7 +279,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.02,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.2,
   },
 
   "Gamma - Deep Waters": {
@@ -313,7 +291,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.02,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.2,
   },
 
   "Gamma - Aurora Weave": {
@@ -326,7 +303,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.05,
   },
 
   "Gamma - Impermanence": {
@@ -339,7 +315,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.03,
   },
 
   "Gamma - Sacred Geometry": {
@@ -352,7 +327,6 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.05,
   },
 
   "Gamma - Tidal Shift": {
@@ -365,6 +339,5 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
     harmonicEven: 0.0,
     harmonicOdd: 0.0,
-    combAmount: 0.04,
   },
 };

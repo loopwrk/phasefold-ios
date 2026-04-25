@@ -89,7 +89,6 @@
           @info="showInfo" />
         <ParameterSlider label="Odd harmonics" v-model="p.harmonicOdd" :min="0" :max="0.6" :step="0.01"
           @info="showInfo" />
-        <ParameterSlider label="Comb" v-model="p.combAmount" :min="0" :max="0.5" :step="0.01" @info="showInfo" />
       </details>
 
       <!-- Parameter info -->
@@ -244,7 +243,6 @@ function buildParams(): SynthParams {
     overtonePower: 1.3,
     harmonicEven: p.harmonicEven,
     harmonicOdd: p.harmonicOdd,
-    combAmount: p.combAmount,
     voiceDelay: Math.min(30, Math.max(10, 0.08 * p.dur)),
     breathRate: p.breathRate,
   };
@@ -323,7 +321,7 @@ const PARAM_INFO: Record<string, string> = {
   "Even harmonics":
     "Adds round/sweet harmonic colour on top of the main tone (Chebyshev T\u2082).",
   "Odd harmonics": "Adds nasal/brighter harmonic colour (Chebyshev T\u2083).",
-  Comb: "Subtle shimmery resonant texture tied to the base frequency.",
+
 };
 
 function showInfo(label: string) {

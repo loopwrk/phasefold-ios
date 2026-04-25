@@ -20,7 +20,6 @@ export interface SynthParams {
   overtonePower: number; // harmonic decay exponent
   harmonicEven: number; // even Chebyshev harmonic level
   harmonicOdd: number; // odd Chebyshev harmonic level
-  combAmount: number; // comb filter intensity
   voiceDelay: number; // seconds before voices emerge
   breathRate: number; // Hz — stereo breath oscillation
 }
