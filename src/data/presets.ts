@@ -6,8 +6,6 @@ export interface PresetValues {
   breathRate: number;
   binauralDeltaHz0: number;
   binauralAmount: number;
-  harmonicEven: number;
-  harmonicOdd: number;
 }
 
 export const PRESETS: Record<string, PresetValues> = {
@@ -19,20 +17,16 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012,
     binauralDeltaHz0: 1.2,
     binauralAmount: 0.05,
-    harmonicEven: 0.06,
-    harmonicOdd: 0.1,
   },
 
   "Delta - Sacred Ground": {
     dur: 260,
     baseF0: 136.1,
-    voices: 9,
-    layers: 5,
-    breathRate: 0.083,
+    voices: 7,
+    layers: 4,
+    breathRate: 0.012,
     binauralDeltaHz0: 2.5,
     binauralAmount: 0.18,
-    harmonicEven: 0.12,
-    harmonicOdd: 0.45,
   },
 
   "Delta - Moonrise": {
@@ -43,8 +37,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.083,
     binauralDeltaHz0: 2.0,
     binauralAmount: 0.26,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
   },
 
   "Delta - Crossing Currents": {
@@ -55,20 +47,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.05,
     binauralDeltaHz0: 1.7,
     binauralAmount: 0.6,
-    harmonicEven: 0.02,
-    harmonicOdd: 0.02,
-  },
-
-  "Delta - Murmuration": {
-    dur: 190,
-    baseF0: 220.0,
-    voices: 9,
-    layers: 5,
-    breathRate: 0.083,
-    binauralDeltaHz0: 3.7,
-    binauralAmount: 0.35,
-    harmonicEven: 0.6,
-    harmonicOdd: 0.6,
   },
 
   "Theta - Ancient Forest": {
@@ -79,20 +57,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.025,
     binauralDeltaHz0: 5.5,
     binauralAmount: 0.28,
-    harmonicEven: 0.22,
-    harmonicOdd: 0.38,
-  },
-
-  "Theta - Meandering River": {
-    dur: 240,
-    baseF0: 220.0,
-    voices: 5,
-    layers: 2,
-    breathRate: 0.005,
-    binauralDeltaHz0: 6.66,
-    binauralAmount: 0.6,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
   },
 
   "Theta - Gentle Rain": {
@@ -103,20 +67,16 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.083,
     binauralDeltaHz0: 7.0,
     binauralAmount: 0.5,
-    harmonicEven: 0.05,
-    harmonicOdd: 0.02,
   },
 
   "Theta - Earth Resonance": {
     dur: 300,
-    baseF0: 25.0,
+    baseF0: 62.0,
     voices: 2,
     layers: 1,
     breathRate: 0.005,
     binauralDeltaHz0: 7.83,
-    binauralAmount: 0.6,
-    harmonicEven: 0.02,
-    harmonicOdd: 0.02,
+    binauralAmount: 0.5,
   },
 
   "Alpha - Mandala": {
@@ -127,8 +87,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.05,
     binauralDeltaHz0: 11.0,
     binauralAmount: 0.5,
-    harmonicEven: 0.25,
-    harmonicOdd: 0.37,
   },
 
   // 10 Hz: most clinically studied alpha frequency.
@@ -143,8 +101,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012, // Restorative
     binauralDeltaHz0: 10.0,
     binauralAmount: 0.4,
-    harmonicEven: 0.1,
-    harmonicOdd: 0.15,
   },
 
   // 8.5 Hz: alpha-theta crossover, the hypnagogic boundary.
@@ -158,8 +114,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.005, // Formless
     binauralDeltaHz0: 8.5,
     binauralAmount: 0.3,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.05,
   },
 
   // 9.5 Hz: mid-alpha, associated with grounded meditative states.
@@ -174,8 +128,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012, // Restorative
     binauralDeltaHz0: 9.5,
     binauralAmount: 0.35,
-    harmonicEven: 0.18,
-    harmonicOdd: 0.3,
   },
 
   "Beta - Wolf Moon": {
@@ -186,8 +138,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012,
     binauralDeltaHz0: 14.75,
     binauralAmount: 0.6,
-    harmonicEven: 0.28,
-    harmonicOdd: 0.34,
   },
 
   // 14 Hz: sensorimotor rhythm (SMR, 12–15 Hz).
@@ -202,8 +152,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.025, // Meditative
     binauralDeltaHz0: 14.0,
     binauralAmount: 0.35,
-    harmonicEven: 0.15,
-    harmonicOdd: 0.12,
   },
 
   // 18 Hz: mid-beta, studied in PMC12145584: beta BBT reduced anxiety,
@@ -217,20 +165,20 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.05, // Relaxed
     binauralDeltaHz0: 18.0,
     binauralAmount: 0.3,
-    harmonicEven: 0.2,
-    harmonicOdd: 0.18,
   },
 
+  // 40 Hz: the most-studied gamma frequency. Research on 40 Hz auditory
+  // stimulation showed increased gamma power and reduced amyloid-beta
+  // plaques in Alzheimer's mouse models (Iaccarino et al., Nature 2016).
+  // Human studies show enhanced cognitive binding and working memory.
   "Gamma - Solar Wind": {
     dur: 300,
     baseF0: 138.6,
     voices: 3,
     layers: 1,
     breathRate: 0.083,
-    binauralDeltaHz0: 100.0,
-    binauralAmount: 0.6,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
+    binauralDeltaHz0: 40.0,
+    binauralAmount: 0.4,
   },
 
   "Gamma - Golden Spiral": {
@@ -239,34 +187,28 @@ export const PRESETS: Record<string, PresetValues> = {
     voices: 4,
     layers: 2,
     breathRate: 0.005,
-    binauralDeltaHz0: 74.02,
-    binauralAmount: 0.6,
-    harmonicEven: 0.02,
-    harmonicOdd: 0.02,
+    binauralDeltaHz0: 33.0,
+    binauralAmount: 0.4,
   },
 
   "Gamma - Interwoven": {
     dur: 200,
-    baseF0: 88.0,
+    baseF0: 110.0,
     voices: 2,
     layers: 2,
     breathRate: 0.025,
-    binauralDeltaHz0: 44.0,
-    binauralAmount: 0.6,
-    harmonicEven: 0.15,
-    harmonicOdd: 0.12,
+    binauralDeltaHz0: 36.0,
+    binauralAmount: 0.4,
   },
 
   "Gamma - Bioluminescence": {
     dur: 200,
     baseF0: 165.0,
     voices: 6,
-    layers: 5,
+    layers: 3,
     breathRate: 0.05,
-    binauralDeltaHz0: 47.3,
-    binauralAmount: 0.6,
-    harmonicEven: 0.52,
-    harmonicOdd: 0.55,
+    binauralDeltaHz0: 42.0,
+    binauralAmount: 0.35,
   },
 
   "Gamma - Oceanic Thoughts": {
@@ -277,8 +219,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012,
     binauralDeltaHz0: 53.3,
     binauralAmount: 0.02,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
   },
 
   "Gamma - Deep Waters": {
@@ -289,32 +229,26 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012,
     binauralDeltaHz0: 53.3,
     binauralAmount: 0.02,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
   },
 
   "Gamma - Aurora Weave": {
-    dur: 45,
+    dur: 120,
     baseF0: 140.0,
     voices: 7,
     layers: 2,
     breathRate: 0.005,
-    binauralDeltaHz0: 100.0,
-    binauralAmount: 0.6,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
+    binauralDeltaHz0: 40.0,
+    binauralAmount: 0.4,
   },
 
   "Gamma - Impermanence": {
-    dur: 107,
+    dur: 120,
     baseF0: 132.0,
     voices: 5,
     layers: 3,
     breathRate: 0.005,
-    binauralDeltaHz0: 100.0,
-    binauralAmount: 0.6,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
+    binauralDeltaHz0: 35.0,
+    binauralAmount: 0.4,
   },
 
   "Gamma - Sacred Geometry": {
@@ -323,10 +257,8 @@ export const PRESETS: Record<string, PresetValues> = {
     voices: 3,
     layers: 2,
     breathRate: 0.005,
-    binauralDeltaHz0: 100.0,
-    binauralAmount: 0.6,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
+    binauralDeltaHz0: 33.0,
+    binauralAmount: 0.4,
   },
 
   "Gamma - Tidal Shift": {
@@ -335,9 +267,7 @@ export const PRESETS: Record<string, PresetValues> = {
     voices: 3,
     layers: 1,
     breathRate: 0.005,
-    binauralDeltaHz0: 100.0,
-    binauralAmount: 0.6,
-    harmonicEven: 0.0,
-    harmonicOdd: 0.0,
+    binauralDeltaHz0: 38.0,
+    binauralAmount: 0.4,
   },
 };

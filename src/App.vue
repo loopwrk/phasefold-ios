@@ -82,15 +82,6 @@
           @info="showInfo" />
       </details>
 
-      <!-- Timbral -->
-      <details class="section">
-        <summary class="section-title clickable">Timbral</summary>
-        <ParameterSlider label="Even harmonics" v-model="p.harmonicEven" :min="0" :max="0.6" :step="0.01"
-          @info="showInfo" />
-        <ParameterSlider label="Odd harmonics" v-model="p.harmonicOdd" :min="0" :max="0.6" :step="0.01"
-          @info="showInfo" />
-      </details>
-
       <!-- Parameter info -->
       <Transition name="fade">
         <div v-if="infoText" class="info-panel" @click="infoText = ''">
@@ -241,8 +232,6 @@ function buildParams(): SynthParams {
     binauralDeltaHz0: p.binauralDeltaHz0,
     binauralAmount: p.binauralAmount,
     overtonePower: 1.3,
-    harmonicEven: p.harmonicEven,
-    harmonicOdd: p.harmonicOdd,
     voiceDelay: Math.min(30, Math.max(10, 0.08 * p.dur)),
     breathRate: p.breathRate,
   };
@@ -318,9 +307,6 @@ const PARAM_INFO: Record<string, string> = {
   "Breath rate":
     "Sets the pace of the spatial breathing cycle. Also gently modulates the binaural beat frequency for a slowly drifting entrainment effect.",
   "Binaural mix": "How much binaural bed is mixed under the main signal.",
-  "Even harmonics":
-    "Adds round/sweet harmonic colour on top of the main tone (Chebyshev T\u2082).",
-  "Odd harmonics": "Adds nasal/brighter harmonic colour (Chebyshev T\u2083).",
 
 };
 

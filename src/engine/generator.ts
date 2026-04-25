@@ -44,8 +44,6 @@ export function generateAudio(
     binauralDeltaHz0,
     binauralAmount,
     overtonePower,
-    harmonicEven,
-    harmonicOdd,
     voiceDelay,
     breathRate,
   } = params;
@@ -340,6 +338,48 @@ export function generateAudio(
   }
 
   // ── 15. Chebyshev harmonics (even T2 / odd T3) ─
+  // Automatically computed from baseF0 and binauralDeltaHz0 to ensure
+  // therapeutically optimal timbral enrichment without user intervention.
+  //
+  // Research basis:
+  //   - Binaural FFR works best with carriers in 200-500 Hz range
+  //     (Licklider 1950, Perrott & Nelson 1969). Phasefold carriers
+  //     span 20-220 Hz, so lower carriers benefit from harmonic
+  //     enrichment to push energy into the sensitive hearing range.
+  //   - Masking/harmonic content INCREASES perceived binaural beat
+  //     loudness and improves entrainment outcomes (Schwarz & Taylor
+  //     2005, Gao et al. 2014). Studies using masking consistently
+  //     show positive results; no-masking studies trend toward null.
+  //   - Even harmonics (T2) produce warm, round timbres appropriate
+  //     for relaxation states (delta/theta/alpha).
+  //   - Odd harmonics (T3) produce brighter, more present timbres
+  //     appropriate for alertness states (beta/gamma).
+  //
+  // Total amount: inversely proportional to base frequency.
+  //   20 Hz → 0.30 (maximum enrichment for sub-bass carriers)
+  //   220 Hz → 0.05 (minimal - already in sensitive range)
+  //
+  // Even/odd split: based on binaural delta frequency band.
+  //   Delta/theta (low delta) → mostly even (warm, sleep/meditation)
+  //   Beta/gamma (high delta) → mostly odd (bright, focus/alertness)
+  //   The oddRatio is a linear ramp from 0.15 to 0.80 across 0-50 Hz.
+  const HARM_TOTAL_MAX = 0.30;
+  const HARM_TOTAL_MIN = 0.05;
+  const HARM_FREQ_LO = 20;
+  const HARM_FREQ_HI = 220;
+  const HARM_ODD_RATIO_MIN = 0.15;
+  const HARM_ODD_RATIO_MAX = 0.80;
+  const HARM_ODD_RATIO_REF = 50; // Hz - delta at which oddRatio saturates
+
+  const freqT = Math.min(1, Math.max(0, (baseF0 - HARM_FREQ_LO) / (HARM_FREQ_HI - HARM_FREQ_LO)));
+  const harmonicTotal = HARM_TOTAL_MAX - freqT * (HARM_TOTAL_MAX - HARM_TOTAL_MIN);
+  const oddRatio = Math.min(
+    HARM_ODD_RATIO_MAX,
+    HARM_ODD_RATIO_MIN + (HARM_ODD_RATIO_MAX - HARM_ODD_RATIO_MIN) * (binauralDeltaHz0 / HARM_ODD_RATIO_REF),
+  );
+  const harmonicEven = harmonicTotal * (1 - oddRatio);
+  const harmonicOdd = harmonicTotal * oddRatio;
+
   for (let i = 0; i < N; i++) {
     const x = Math.max(-1, Math.min(1, mix[i]));
     const even = 2 * x * x - 1;

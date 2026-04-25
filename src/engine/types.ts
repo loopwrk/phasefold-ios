@@ -18,8 +18,6 @@ export interface SynthParams {
   binauralDeltaHz0: number; // initial binaural beat delta
   binauralAmount: number; // binaural mix level
   overtonePower: number; // harmonic decay exponent
-  harmonicEven: number; // even Chebyshev harmonic level
-  harmonicOdd: number; // odd Chebyshev harmonic level
   voiceDelay: number; // seconds before voices emerge
   breathRate: number; // Hz — stereo breath oscillation
 }
