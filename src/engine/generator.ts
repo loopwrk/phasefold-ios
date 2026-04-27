@@ -87,10 +87,15 @@ export function generateAudio(
   }
 
   // ── 3. Convergence envelope ───────────────────
-  // 1 → 0 over the piece; shape set by collapseCurve
+  // Reduced from 1.0 to 0.9 as preliminary listening tests
+  // suggest slightly less aggressive convergence improves
+  // the therapeutic quality of the sound. Less busy at start.
+  // Further testing and user feedback will be important to refine
+  // this parameter. See collapse-curve-rationale.docx section 6 for details.
+  const CONV_INITIAL = 0.9;
   const convGain = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    convGain[i] = 1.0 - Math.pow(progress[i], collapseCurve);
+    convGain[i] = CONV_INITIAL * (1.0 - Math.pow(progress[i], collapseCurve));
   }
 
   // ── 4. Voice emergence envelope ───────────────
@@ -139,7 +144,7 @@ export function generateAudio(
   if (breathRate > 0) {
     for (let i = 0; i < N; i++) {
       const b = 0.5 * (1 + Math.sin(TWO_PI * breathRate * sampleTimes[i]));
-      breath[i] = b * (0.3 + 0.7 * convGain[i]);
+      breath[i] = b * convGain[i];
     }
   } else {
     breath.fill(0.5); // neutral when disabled
@@ -168,7 +173,8 @@ export function generateAudio(
 
   const convGainCtrl = new Float32Array(Nc);
   for (let i = 0; i < Nc; i++) {
-    convGainCtrl[i] = 1.0 - Math.pow(ctrlProgress[i], collapseCurve);
+    convGainCtrl[i] =
+      CONV_INITIAL * (1.0 - Math.pow(ctrlProgress[i], collapseCurve));
   }
 
   const tiltAmplitude = new Float32Array(Nc);
@@ -363,19 +369,25 @@ export function generateAudio(
   //   Delta/theta (low delta) → mostly even (warm, sleep/meditation)
   //   Beta/gamma (high delta) → mostly odd (bright, focus/alertness)
   //   The oddRatio is a linear ramp from 0.15 to 0.80 across 0-50 Hz.
-  const HARM_TOTAL_MAX = 0.30;
+  const HARM_TOTAL_MAX = 0.3;
   const HARM_TOTAL_MIN = 0.05;
   const HARM_FREQ_LO = 20;
   const HARM_FREQ_HI = 220;
   const HARM_ODD_RATIO_MIN = 0.15;
-  const HARM_ODD_RATIO_MAX = 0.80;
+  const HARM_ODD_RATIO_MAX = 0.8;
   const HARM_ODD_RATIO_REF = 50; // Hz - delta at which oddRatio saturates
 
-  const freqT = Math.min(1, Math.max(0, (baseF0 - HARM_FREQ_LO) / (HARM_FREQ_HI - HARM_FREQ_LO)));
-  const harmonicTotal = HARM_TOTAL_MAX - freqT * (HARM_TOTAL_MAX - HARM_TOTAL_MIN);
+  const freqT = Math.min(
+    1,
+    Math.max(0, (baseF0 - HARM_FREQ_LO) / (HARM_FREQ_HI - HARM_FREQ_LO)),
+  );
+  const harmonicTotal =
+    HARM_TOTAL_MAX - freqT * (HARM_TOTAL_MAX - HARM_TOTAL_MIN);
   const oddRatio = Math.min(
     HARM_ODD_RATIO_MAX,
-    HARM_ODD_RATIO_MIN + (HARM_ODD_RATIO_MAX - HARM_ODD_RATIO_MIN) * (binauralDeltaHz0 / HARM_ODD_RATIO_REF),
+    HARM_ODD_RATIO_MIN +
+      (HARM_ODD_RATIO_MAX - HARM_ODD_RATIO_MIN) *
+        (binauralDeltaHz0 / HARM_ODD_RATIO_REF),
   );
   const harmonicEven = harmonicTotal * (1 - oddRatio);
   const harmonicOdd = harmonicTotal * oddRatio;
@@ -427,8 +439,11 @@ export function generateAudio(
   for (let i = 0; i < N; i++) {
     const binEnv = Math.pow(convGain[i], 1.4);
     const be = baseEffectsEnv[i];
-    const breathL = 0.5 + be * (0.1 + 0.4 * breath[i] - 0.5);
-    const breathR = 0.5 + be * (0.1 + 0.4 * (1 - breath[i]) - 0.5);
+    // Gate panning deviation with convGain so stereo movement
+    // converges to center (0.5/0.5) alongside everything else
+    const breathPan = convGain[i] * be;
+    const breathL = 0.5 + breathPan * (0.1 + 0.4 * breath[i] - 0.5);
+    const breathR = 0.5 + breathPan * (0.1 + 0.4 * (1 - breath[i]) - 0.5);
 
     const lBase = mix[i] * breathL + binauralAmount * binEnv * bL[i];
     const rBase = mix[i] * breathR + binauralAmount * binEnv * bR[i];

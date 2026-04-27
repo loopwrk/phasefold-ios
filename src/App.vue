@@ -296,14 +296,12 @@ function onScrub(e: Event) {
 // ── parameter descriptions ─────────────────────
 const PARAM_INFO: Record<string, string> = {
   Duration:
-    "How long the piece evolves. Short (5 s) for testing, long (60\u2013300 s) for meditative textures.",
+    "How long the piece evolves for over time.",
   "Base frequency":
     "The pitch everything is built around. 60\u2013120 Hz feels grounded; 150\u2013300 Hz feels bright.",
   "Voices per layer": "More voices = richer, thicker sound with more motion.",
   Layers:
-    "Depth of recursion. 1\u20132 = clear/structural, 4\u20135 = complex folding sound fields.",
-  "Voice delay":
-    "Base tone starts alone; voices fade in after this delay. Creates an \u201carriving\u201d texture.",
+    "Depth of recursion. 1-4 = clear/structural, 4+ = complex folding sound fields.",
   "Breath rate":
     "Sets the pace of the spatial breathing cycle. Also gently modulates the binaural beat frequency for a slowly drifting entrainment effect.",
   "Binaural mix": "How much binaural bed is mixed under the main signal.",

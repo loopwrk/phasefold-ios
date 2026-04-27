@@ -7,8 +7,22 @@
  * Generation runs in a dedicated Web Worker so the main thread
  * stays responsive regardless of track length.
  *
+ * Playback design:
+ *   - AudioBuffer is created once per generation and cached.
+ *     Scrubbing reuses the cached buffer to avoid per-scrub
+ *     allocation (~53 MB for a 10 min stereo track at 44.1 kHz).
+ *   - A monotonic playbackId counter disambiguates onended callbacks
+ *     from stale source nodes (e.g. during rapid scrubbing) so that
+ *     only the CURRENT source's natural end-of-track triggers state
+ *     changes. Without this, a rapid scrub sequence can race:
+ *     stop() → play() → stale onended fires → kills new playback.
+ *   - playbackTime is clamped to [0, duration] in the tick loop
+ *     so the scrubber never overshoots the buffer boundary.
+ *   - startTime in play() is clamped so we never pass an out-of-range
+ *     offset to source.start().
+ *
  * iOS note: AudioContext must be created / resumed inside a user-gesture
- * handler.  The play() and generate() calls are always user-initiated
+ * handler. The play() and generate() calls are always user-initiated
  * so this is handled automatically.
  */
 
@@ -24,9 +38,12 @@ import { encodeWav } from "../engine/wav";
 export function useAudioEngine() {
   let ctx: AudioContext | null = null;
   let source: AudioBufferSourceNode | null = null;
+  let cachedBuffer: AudioBuffer | null = null;
+  let audioDuration = 0;
   let animFrame = 0;
   let startedAt = 0;
   let startOffset = 0;
+  let playbackId = 0; // monotonic counter to identify the current source
 
   const isPlaying = ref(false);
   const isGenerating = ref(false);
@@ -47,6 +64,30 @@ export function useAudioEngine() {
     return ctx;
   }
 
+  /**
+   * Build and cache an AudioBuffer from the current audio data.
+   * Called once after generation; subsequent play/scrub calls reuse
+   * the cached buffer.
+   */
+  function ensureBuffer(): AudioBuffer | null {
+    if (cachedBuffer) return cachedBuffer;
+
+    const audio = currentAudio.value;
+    if (!audio) return null;
+
+    const ac = ensureContext();
+    const buf = ac.createBuffer(2, audio.left.length, audio.sampleRate);
+    // Float32Array from the worker may carry an ArrayBufferLike
+    // (SharedArrayBuffer-compatible type). copyToChannel requires a
+    // plain ArrayBuffer-backed Float32Array, so we wrap once here.
+    buf.copyToChannel(new Float32Array(audio.left), 0);
+    buf.copyToChannel(new Float32Array(audio.right), 1);
+
+    cachedBuffer = buf;
+    audioDuration = audio.left.length / audio.sampleRate;
+    return buf;
+  }
+
   // ── public API ───────────────────────────────
 
   /**
@@ -57,6 +98,10 @@ export function useAudioEngine() {
   function generate(params: SynthParams): Promise<StereoAudio> {
     isGenerating.value = true;
     generationProgress.value = 0;
+
+    // Invalidate cached buffer from previous generation
+    cachedBuffer = null;
+    audioDuration = 0;
 
     return new Promise<StereoAudio>((resolve, reject) => {
       const worker = new Worker(
@@ -111,35 +156,59 @@ export function useAudioEngine() {
 
   /** Start playback from startTime (seconds). */
   function play(startTime = 0) {
-    const audio = currentAudio.value;
-    if (!audio) return;
+    const buf = ensureBuffer();
+    if (!buf) return;
 
     stop(); // stop any existing playback
 
+    // Clamp startTime to valid buffer range
+    const safeStart = Math.max(0, Math.min(startTime, audioDuration - 0.01));
+
+    // If clamped start is at or past the end, just position the
+    // scrubber there without starting a source that would
+    // immediately fire onended.
+    if (safeStart >= audioDuration - 0.01) {
+      playbackTime.value = audioDuration;
+      return;
+    }
+
     const ac = ensureContext();
-    const buf = ac.createBuffer(2, audio.left.length, audio.sampleRate);
-
-    buf.copyToChannel(new Float32Array(audio.left), 0);
-    buf.copyToChannel(new Float32Array(audio.right), 1);
-
     source = ac.createBufferSource();
     source.buffer = buf;
     source.connect(ac.destination);
-    source.start(0, startTime);
+    source.start(0, safeStart);
 
-    startOffset = startTime;
+    startOffset = safeStart;
     startedAt = ac.currentTime;
     isPlaying.value = true;
 
+    // Capture the current id so the onended closure can check
+    // whether it belongs to the source that is still current.
+    const myId = ++playbackId;
+
     source.onended = () => {
-      isPlaying.value = false;
-      cancelAnimationFrame(animFrame);
+      // Ignore if this callback came from a stale source that was
+      // replaced by a newer play() call (e.g. rapid scrubbing).
+      if (myId !== playbackId) return;
+
+      // Only act if playback wasn't already stopped manually.
+      // stop() sets isPlaying = false before calling source.stop(),
+      // so if isPlaying is still true here, the track ended naturally.
+      if (isPlaying.value) {
+        isPlaying.value = false;
+        cancelAnimationFrame(animFrame);
+        playbackTime.value = audioDuration;
+      }
     };
 
     // Track playback position at display refresh rate
     const tick = () => {
       if (!isPlaying.value || !ctx) return;
-      playbackTime.value = startOffset + (ctx.currentTime - startedAt);
+      if (myId !== playbackId) return; // stale tick from replaced source
+
+      const elapsed = startOffset + (ctx.currentTime - startedAt);
+      playbackTime.value = Math.min(elapsed, audioDuration);
+
       animFrame = requestAnimationFrame(tick);
     };
     tick();
@@ -147,6 +216,12 @@ export function useAudioEngine() {
 
   /** Stop playback. */
   function stop() {
+    // Set isPlaying FIRST so that any subsequent onended callback
+    // from this source knows it was an explicit stop, not a
+    // natural end-of-track.
+    isPlaying.value = false;
+    cancelAnimationFrame(animFrame);
+
     if (source) {
       try {
         source.stop();
@@ -156,8 +231,6 @@ export function useAudioEngine() {
       source.disconnect();
       source = null;
     }
-    isPlaying.value = false;
-    cancelAnimationFrame(animFrame);
   }
 
   /** Download the current audio as a 16-bit WAV. */
@@ -179,6 +252,7 @@ export function useAudioEngine() {
 
   /** Duration of current audio in seconds. */
   function getDuration(): number {
+    if (audioDuration > 0) return audioDuration;
     const audio = currentAudio.value;
     if (!audio) return 0;
     return audio.left.length / audio.sampleRate;
