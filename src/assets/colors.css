@@ -1,0 +1,91 @@
+/*
+ * Phasefold-iOS: colour system
+ *
+ * Split-channel oklch tokens switched via prefers-color-scheme.
+ * Composed --cs-* tokens are derived from the channels and available
+ * globally to every component via :root cascade.
+ *
+ * Palette roles:
+ *   bg      - page / app background
+ *   surf    - card and panel surfaces
+ *   raised  - elevated elements, borders, dividers
+ *   action  - interactive accent (buttons, links, active states)
+ *   cntrst  - high-contrast text and foreground
+ *   text    - primary body / heading text
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* bg: page background */
+  --cs-bg-l: 0.93;
+  --cs-bg-c: 0.025;
+  --cs-bg-h: 275;
+
+  /* surf: card / panel surfaces */
+  --cs-surf-l: 0.85;
+  --cs-surf-c: 0.04;
+  --cs-surf-h: 272;
+
+  /* raised: elevated elements, borders */
+  --cs-raised-l: 0.72;
+  --cs-raised-c: 0.06;
+  --cs-raised-h: 270;
+
+  /* action: interactive accent */
+  --cs-action-l: 0.42;
+  --cs-action-c: 0.12;
+  --cs-action-h: 268;
+
+  /* cntrst: high-contrast foreground */
+  --cs-cntrst-l: 0.22;
+  --cs-cntrst-c: 0.05;
+  --cs-cntrst-h: 268;
+
+  /* text: primary body and heading text */
+  --cs-text-l: 0.22;
+  --cs-text-c: 0.05;
+  --cs-text-h: 268;
+
+  /* Composed tokens */
+  --cs-bg: oklch(var(--cs-bg-l) var(--cs-bg-c) var(--cs-bg-h));
+  --cs-surf: oklch(var(--cs-surf-l) var(--cs-surf-c) var(--cs-surf-h));
+  --cs-raised: oklch(var(--cs-raised-l) var(--cs-raised-c) var(--cs-raised-h));
+  --cs-action: oklch(var(--cs-action-l) var(--cs-action-c) var(--cs-action-h));
+  --cs-cntrst: oklch(var(--cs-cntrst-l) var(--cs-cntrst-c) var(--cs-cntrst-h));
+  --cs-text: oklch(var(--cs-text-l) var(--cs-text-c) var(--cs-text-h));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* bg */
+    --cs-bg-l: 0.18;
+    --cs-bg-c: 0.04;
+    --cs-bg-h: 255;
+
+    /* surf */
+    --cs-surf-l: 0.26;
+    --cs-surf-c: 0.045;
+    --cs-surf-h: 258;
+
+    /* raised */
+    --cs-raised-l: 0.38;
+    --cs-raised-c: 0.05;
+    --cs-raised-h: 260;
+
+    /* action */
+    --cs-action-l: 0.68;
+    --cs-action-c: 0.12;
+    --cs-action-h: 255;
+
+    /* cntrst */
+    --cs-cntrst-l: 0.92;
+    --cs-cntrst-c: 0.01;
+    --cs-cntrst-h: 255;
+
+    /* text: pure white */
+    --cs-text-l: 1.0;
+    --cs-text-c: 0;
+    --cs-text-h: 0;
+  }
+}

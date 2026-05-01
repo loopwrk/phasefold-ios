@@ -182,8 +182,6 @@ export function useAudioEngine() {
     startedAt = ac.currentTime;
     isPlaying.value = true;
 
-    // Capture the current id so the onended closure can check
-    // whether it belongs to the source that is still current.
     const myId = ++playbackId;
 
     source.onended = () => {
@@ -193,7 +191,6 @@ export function useAudioEngine() {
 
       // Only act if playback wasn't already stopped manually.
       // stop() sets isPlaying = false before calling source.stop(),
-      // so if isPlaying is still true here, the track ended naturally.
       if (isPlaying.value) {
         isPlaying.value = false;
         cancelAnimationFrame(animFrame);
