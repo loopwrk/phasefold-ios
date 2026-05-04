@@ -18,6 +18,11 @@ const router = createRouter({
       component: () => import("../views/OnboardingView.vue"),
     },
     {
+      path: "/guidance/:intent",
+      name: "guidance",
+      component: () => import("../views/IntentGuidanceView.vue"),
+    },
+    {
       path: "/",
       name: "synthesizer",
       component: () => import("../views/SynthesizerView.vue"),

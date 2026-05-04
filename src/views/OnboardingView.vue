@@ -14,7 +14,7 @@
         </h2>
 
         <div class="intent-options">
-          <button v-for="option in INTENTS" :key="option.label" class="intent-btn" @click="selectIntent(option.label)">
+          <button v-for="option in INTENTS" :key="option.slug" class="intent-btn" @click="selectIntent(option.slug)">
             {{ option.label }}
           </button>
         </div>
@@ -25,25 +25,31 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
+const route = useRoute()
 const router = useRouter()
-const step = ref(0)
+
+// Skip the welcome splash if arriving from guidance (via ?step=1)
+const initialStep = route.query.step === '1' ? 1 : 0
+const step = ref(initialStep)
 
 const INTENTS = [
-  { label: 'Reduce anxiety' },
-  { label: 'Fall asleep' },
-  { label: 'Increase focus' },
+  { label: 'Reduce anxiety', slug: 'anxiety' },
+  { label: 'Fall asleep', slug: 'sleep' },
+  { label: 'Increase focus', slug: 'focus' },
 ]
 
 onMounted(() => {
-  setTimeout(() => {
-    step.value = 1
-  }, 2600)
+  if (step.value === 0) {
+    setTimeout(() => {
+      step.value = 1
+    }, 2600)
+  }
 })
 
-function selectIntent(label: string) {
-  router.push('/')
+function selectIntent(slug: string) {
+  router.push({ name: 'guidance', params: { intent: slug } })
 }
 </script>
 
