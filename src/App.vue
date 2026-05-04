@@ -22,8 +22,8 @@ body,
 
 body {
   font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
-    sans-serif;
+    "Figtree Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Helvetica Neue", sans-serif;
   background: #f5f5f7;
   color: #1d1d1f;
   -webkit-font-smoothing: antialiased;

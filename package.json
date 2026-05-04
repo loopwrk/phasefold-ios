@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/figtree": "^5.2.10",
     "vue": "^3.4.0",
     "vue-router": "^4.6.4"
   },

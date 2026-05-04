@@ -432,7 +432,6 @@ details[open]>.section-title.clickable::before {
   flex: 1;
   padding: 7px 2px;
   font-size: 11px;
-  font-family: inherit;
   font-weight: 500;
   color: #86868b;
   background: #f0f0f5;
@@ -479,7 +478,6 @@ details[open]>.section-title.clickable::before {
   flex: 1;
   padding: 7px 2px;
   font-size: 11px;
-  font-family: inherit;
   font-weight: 500;
   color: #86868b;
   background: #f0f0f5;

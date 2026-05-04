@@ -124,7 +124,6 @@ function selectIntent(label: string) {
   padding: 20px 24px;
   font-size: 18px;
   font-weight: 600;
-  font-family: inherit;
   color: var(--cs-bg);
   background: var(--cs-action);
   border: none;
