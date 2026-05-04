@@ -33,9 +33,9 @@
   --cs-raised-h: 270;
 
   /* action: interactive accent */
-  --cs-action-l: 0.42;
+  --cs-action-l: 0.68;
   --cs-action-c: 0.12;
-  --cs-action-h: 268;
+  --cs-action-h: 255;
 
   /* cntrst: high-contrast foreground */
   --cs-cntrst-l: 0.22;
@@ -84,7 +84,7 @@
     --cs-cntrst-h: 255;
 
     /* text: pure white */
-    --cs-text-l: 1.0;
+    --cs-text-l: 1;
     --cs-text-c: 0;
     --cs-text-h: 0;
   }

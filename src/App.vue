@@ -1,5 +1,9 @@
 <template>
-  <router-view />
+  <div class="app">
+    <div class="view-container">
+      <router-view />
+    </div>
+  </div>
 </template>
 
 <!-- Global resets -->
@@ -24,5 +28,19 @@ body {
   color: #1d1d1f;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--cs-bg);
+}
+
+.app>.view-container {
+  flex: 1;
+  min-height: 0;
 }
 </style>

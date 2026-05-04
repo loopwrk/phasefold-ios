@@ -13,6 +13,11 @@ const router = createRouter({
   history: isNative ? createWebHashHistory() : createWebHistory(),
   routes: [
     {
+      path: "/onboarding",
+      name: "onboarding",
+      component: () => import("../views/OnboardingView.vue"),
+    },
+    {
       path: "/",
       name: "synthesizer",
       component: () => import("../views/SynthesizerView.vue"),

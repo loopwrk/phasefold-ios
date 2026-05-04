@@ -1,5 +1,5 @@
 <template>
-  <div class="app">
+  <div class="synthesizer-view">
     <header class="app-header">
       <h1>Phasefold</h1>
       <p class="subtitle">Generative harmonic synthesizer</p>
@@ -322,12 +322,7 @@ function fmtTime(s: number): string {
 </script>
 
 <style scoped>
-.app {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  max-width: 480px;
-  margin: 0 auto;
+.synthesizer-view {
   background: #fff;
 }
 
