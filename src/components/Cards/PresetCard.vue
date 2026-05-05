@@ -3,7 +3,8 @@
     <span class="preset-name">{{ name }}</span>
     <span class="play-icon" aria-label="Play">
       <svg width="16" height="18" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M1 1.54v14.92a1 1 0 0 0 1.5.87l12.5-7.46a1 1 0 0 0 0-1.74L2.5.67A1 1 0 0 0 1 1.54Z" fill="currentColor" />
+        <path d="M1 1.54v14.92a1 1 0 0 0 1.5.87l12.5-7.46a1 1 0 0 0 0-1.74L2.5.67A1 1 0 0 0 1 1.54Z"
+          fill="currentColor" />
       </svg>
     </span>
   </button>
@@ -25,7 +26,7 @@ defineEmits<{
   align-items: center;
   width: 100%;
   padding: 16px;
-  background: var(--cs-raised);
+  background: var(--cs-surf);
   border: none;
   border-radius: 14px;
   cursor: pointer;
@@ -53,6 +54,6 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--cs-text);
+  color: var(--cs-action);
 }
 </style>

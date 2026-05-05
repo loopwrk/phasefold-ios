@@ -9,24 +9,11 @@ const amplitude = ref(0.5);
 <template>
   <Story title="ParameterSlider">
     <Variant title="Frequency">
-      <ParameterSlider
-        label="Frequency"
-        v-model="frequency"
-        :min="0.5"
-        :max="40"
-        :step="0.01"
-        suffix=" Hz"
-        subtitle="Base oscillation rate"
-      />
+      <ParameterSlider label="Frequency" v-model="frequency" :min="0.5" :max="40" :step="0.01" suffix=" Hz"
+        subtitle="Base oscillation rate" />
     </Variant>
     <Variant title="Amplitude (no subtitle)">
-      <ParameterSlider
-        label="Amplitude"
-        v-model="amplitude"
-        :min="0"
-        :max="1"
-        :step="0.01"
-      />
+      <ParameterSlider label="Amplitude" v-model="amplitude" :min="0" :max="1" :step="0.01" />
     </Variant>
   </Story>
 </template>
