@@ -22,9 +22,9 @@
  *     offset to source.start().
  *
  * iOS note: AudioContext must be created / resumed inside a user-gesture
- * handler. generate() calls ensureContext() synchronously at the top
- * of the call stack (before any async work) so the context is unlocked
- * by the time playback begins after the worker finishes.
+ * handler. The context is a shared singleton (engine/audioContext.ts).
+ * Call warmup() from any tap handler BEFORE async work or navigation
+ * so iOS unlocks the context while still in the gesture's call stack.
  */
 
 import { ref, shallowRef } from "vue";
@@ -34,10 +34,10 @@ import type {
   WorkerRequest,
   WorkerResponse,
 } from "../engine/types";
+import { getAudioContext } from "../engine/audioContext";
 import { encodeWav } from "../engine/wav";
 
 export function useAudioEngine() {
-  let ctx: AudioContext | null = null;
   let source: AudioBufferSourceNode | null = null;
   let cachedBuffer: AudioBuffer | null = null;
   let audioDuration = 0;
@@ -54,17 +54,6 @@ export function useAudioEngine() {
 
   // ── helpers ──────────────────────────────────
 
-  /** Lazily create & resume AudioContext (must be inside a user gesture). */
-  function ensureContext(): AudioContext {
-    if (!ctx) {
-      ctx = new AudioContext({ sampleRate: 44100 });
-    }
-    if (ctx.state === "suspended") {
-      ctx.resume();
-    }
-    return ctx;
-  }
-
   /**
    * Build and cache an AudioBuffer from the current audio data.
    * Called once after generation; subsequent play/scrub calls reuse
@@ -76,7 +65,7 @@ export function useAudioEngine() {
     const audio = currentAudio.value;
     if (!audio) return null;
 
-    const ac = ensureContext();
+    const ac = getAudioContext();
     const buf = ac.createBuffer(2, audio.left.length, audio.sampleRate);
     // Float32Array from the worker may carry an ArrayBufferLike
     // (SharedArrayBuffer-compatible type). copyToChannel requires a
@@ -97,11 +86,6 @@ export function useAudioEngine() {
    * generated StereoAudio. Progress is exposed via generationProgress ref.
    */
   function generate(params: SynthParams): Promise<StereoAudio> {
-    // Create/resume the AudioContext now, while still in the synchronous
-    // call stack of the user's tap. iOS WebKit silently blocks resume()
-    // if it happens after an async gap (e.g. after the worker finishes).
-    ensureContext();
-
     isGenerating.value = true;
     generationProgress.value = 0;
 
@@ -178,7 +162,7 @@ export function useAudioEngine() {
       return;
     }
 
-    const ac = ensureContext();
+    const ac = getAudioContext();
     source = ac.createBufferSource();
     source.buffer = buf;
     source.connect(ac.destination);
@@ -206,10 +190,10 @@ export function useAudioEngine() {
 
     // Track playback position at display refresh rate
     const tick = () => {
-      if (!isPlaying.value || !ctx) return;
+      if (!isPlaying.value) return;
       if (myId !== playbackId) return; // stale tick from replaced source
 
-      const elapsed = startOffset + (ctx.currentTime - startedAt);
+      const elapsed = startOffset + (ac.currentTime - startedAt);
       playbackTime.value = Math.min(elapsed, audioDuration);
 
       animFrame = requestAnimationFrame(tick);

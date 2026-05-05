@@ -120,6 +120,7 @@
 import { ref, reactive, computed, watchEffect } from "vue";
 import ParameterSlider from "../components/ParameterSlider.vue";
 import { useAudioEngine } from "../composables/useAudioEngine";
+import { warmup } from "../engine/audioContext";
 import { PRESETS, type PresetValues } from "../data/presets";
 import { freqToNoteName } from "../engine/dsp";
 import { AUDIO_SR } from "../engine/types";
@@ -238,6 +239,9 @@ function buildParams(): SynthParams {
 }
 
 async function onGenerate() {
+  // Unlock AudioContext while still in the tap's call stack (iOS requirement)
+  warmup();
+
   // Stop any current playback and reset scrubber
   stopAudio();
   playbackTime.value = 0;

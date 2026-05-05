@@ -60,6 +60,7 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PresetCard from '../components/Cards/PresetCard.vue'
 import { PRESETS } from '../data/presets'
+import { warmup } from '../engine/audioContext'
 
 const route = useRoute()
 const router = useRouter()
@@ -104,6 +105,9 @@ const intentPresets = computed(() => {
 })
 
 function selectPreset(presetKey: string) {
+  // Unlock the AudioContext now, while still in the tap's call stack.
+  // PlaybackView will reuse this same context after navigation.
+  warmup()
   router.push({ name: 'playback', params: { preset: presetKey } })
 }
 
