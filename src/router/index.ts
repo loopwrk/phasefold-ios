@@ -23,6 +23,11 @@ const router = createRouter({
       component: () => import("../views/IntentGuidanceView.vue"),
     },
     {
+      path: "/playback/:preset",
+      name: "playback",
+      component: () => import("../views/PlaybackView.vue"),
+    },
+    {
       path: "/",
       name: "synthesizer",
       component: () => import("../views/SynthesizerView.vue"),

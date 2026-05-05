@@ -2,26 +2,16 @@
   <div class="guidance">
     <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">Soneuro</router-link>
     <Transition name="slide" mode="out-in">
-      <div :key="page" class="screen">
-        <div v-if="page < 2" class="screen-content">
+      <!-- Pages 0-1: guidance content -->
+      <div v-if="page < 2" :key="page" class="screen">
+        <div class="screen-content">
           <h1 class="page-title">{{ intentLabel }} - page {{ page + 1 }}</h1>
           <p class="page-subtitle">{{ pageLabels[page] }}</p>
         </div>
 
-        <div v-else class="preset-screen">
-          <h2 class="preset-heading">Choose a preset</h2>
-          <div class="preset-list">
-            <PresetCard
-              v-for="preset in intentPresets"
-              :key="preset"
-              :name="preset"
-            />
-          </div>
-        </div>
-
         <div class="nav-bar">
           <div class="step-dots">
-            <span v-for="i in totalPages" :key="i" :class="['dot', { active: i - 1 === page }]" />
+            <span v-for="i in guidancePages" :key="i" :class="['dot', { active: i - 1 === page }]" />
           </div>
 
           <div class="nav-buttons">
@@ -29,7 +19,35 @@
               Back
             </button>
             <button class="btn btn-next" @click="advance">
-              {{ page < totalPages - 1 ? 'Next' : 'Begin' }} </button>
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page 2: preset picker -->
+      <div v-else key="presets" class="screen">
+        <div class="preset-screen">
+          <h2 class="preset-heading">Choose a preset</h2>
+          <div class="preset-list">
+            <PresetCard
+              v-for="preset in intentPresets"
+              :key="preset.key"
+              :name="preset.displayName"
+              @play="selectPreset(preset.key)"
+            />
+          </div>
+        </div>
+
+        <div class="nav-bar">
+          <div class="step-dots">
+            <span v-for="i in guidancePages" :key="i" :class="['dot', { active: i - 1 === page }]" />
+          </div>
+
+          <div class="nav-buttons">
+            <button class="btn btn-back" @click="page--">
+              Back
+            </button>
           </div>
         </div>
       </div>
@@ -46,7 +64,7 @@ import { PRESETS } from '../data/presets'
 const route = useRoute()
 const router = useRouter()
 const page = ref(0)
-const totalPages = 3
+const guidancePages = 3 // pages 0, 1, 2 (dot indicators cover the guidance flow only)
 
 // Intent slug from route param (e.g. "sleep", "anxiety", "focus")
 const intentSlug = computed(() => route.params.intent as string)
@@ -72,20 +90,25 @@ const INTENT_CONFIG: Record<string, { label: string; pages: string[]; presetTag:
 const intentLabel = computed(() => INTENT_CONFIG[intentSlug.value]?.label ?? intentSlug.value)
 const pageLabels = computed(() => INTENT_CONFIG[intentSlug.value]?.pages ?? ['Page 1', 'Page 2', 'Page 3'])
 
-// Filter presets by intent tag and strip the parenthetical suffix for display
+// Filter presets by intent tag; return both the full key and a cleaned display name
 const intentPresets = computed(() => {
   const tag = INTENT_CONFIG[intentSlug.value]?.presetTag
   if (!tag) return []
   return Object.keys(PRESETS)
     .filter((name) => name.includes(`(${tag})`))
-    .map((name) => name.replace(/\s*\([^)]+\)$/, ''))
+    .map((key) => ({
+      key,
+      displayName: key.replace(/\s*\([^)]+\)$/, ''),
+    }))
 })
 
+function selectPreset(presetKey: string) {
+  router.push({ name: 'playback', params: { preset: presetKey } })
+}
+
 function advance() {
-  if (page.value < totalPages - 1) {
+  if (page.value < 2) {
     page.value++
-  } else {
-    router.push('/')
   }
 }
 </script>
