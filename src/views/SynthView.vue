@@ -1,8 +1,8 @@
 <template>
-  <div class="synthesizer-view">
+  <div class="synth-view">
     <header class="app-header">
       <h1>Phasefold</h1>
-      <p class="subtitle">Generative harmonic synthesizer</p>
+      <p class="subtitle">Generative harmonic synth</p>
     </header>
 
     <div class="controls">
@@ -322,7 +322,7 @@ function fmtTime(s: number): string {
 </script>
 
 <style scoped>
-.synthesizer-view {
+.synth-view {
   background: #fff;
 }
 

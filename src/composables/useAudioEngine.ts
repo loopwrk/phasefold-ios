@@ -22,8 +22,9 @@
  *     offset to source.start().
  *
  * iOS note: AudioContext must be created / resumed inside a user-gesture
- * handler. The play() and generate() calls are always user-initiated
- * so this is handled automatically.
+ * handler. generate() calls ensureContext() synchronously at the top
+ * of the call stack (before any async work) so the context is unlocked
+ * by the time playback begins after the worker finishes.
  */
 
 import { ref, shallowRef } from "vue";
@@ -96,6 +97,11 @@ export function useAudioEngine() {
    * generated StereoAudio. Progress is exposed via generationProgress ref.
    */
   function generate(params: SynthParams): Promise<StereoAudio> {
+    // Create/resume the AudioContext now, while still in the synchronous
+    // call stack of the user's tap. iOS WebKit silently blocks resume()
+    // if it happens after an async gap (e.g. after the worker finishes).
+    ensureContext();
+
     isGenerating.value = true;
     generationProgress.value = 0;
 

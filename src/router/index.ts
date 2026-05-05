@@ -28,9 +28,9 @@ const router = createRouter({
       component: () => import("../views/PlaybackView.vue"),
     },
     {
-      path: "/synthesizer",
-      name: "synthesizer",
-      component: () => import("../views/SynthesizerView.vue"),
+      path: "/synth",
+      name: "synth",
+      component: () => import("../views/synthView.vue"),
     },
   ],
 });
