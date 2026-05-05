@@ -30,7 +30,7 @@ const router = createRouter({
     {
       path: "/synth",
       name: "synth",
-      component: () => import("../views/synthView.vue"),
+      component: () => import("../views/SynthView.vue"),
     },
   ],
 });
