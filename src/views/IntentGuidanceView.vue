@@ -63,7 +63,8 @@ import { PRESETS } from '../data/presets'
 
 const route = useRoute()
 const router = useRouter()
-const page = ref(0)
+const initialPage = Number(route.query.page) || 0
+const page = ref(initialPage)
 const guidancePages = 3 // pages 0, 1, 2 (dot indicators cover the guidance flow only)
 
 // Intent slug from route param (e.g. "sleep", "anxiety", "focus")

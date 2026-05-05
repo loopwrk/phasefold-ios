@@ -7,32 +7,14 @@
       <div class="ring-container">
         <svg class="progress-ring" viewBox="0 0 120 120">
           <!-- Background track -->
-          <circle
-            cx="60" cy="60" r="52"
-            fill="none"
-            stroke="var(--cs-raised)"
-            stroke-width="6"
-          />
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--cs-raised)" stroke-width="6" />
           <!-- Progress arc during generation -->
-          <circle
-            v-if="isGenerating"
-            cx="60" cy="60" r="52"
-            fill="none"
-            stroke="var(--cs-action)"
-            stroke-width="6"
-            stroke-linecap="round"
-            :stroke-dasharray="circumference"
-            :stroke-dashoffset="circumference - (circumference * generationProgress) / 100"
-            class="progress-arc"
-          />
+          <circle v-if="isGenerating" cx="60" cy="60" r="52" fill="none" stroke="var(--cs-action)" stroke-width="6"
+            stroke-linecap="round" :stroke-dasharray="circumference"
+            :stroke-dashoffset="circumference - (circumference * generationProgress) / 100" class="progress-arc" />
           <!-- Filled ring when audio is ready -->
-          <circle
-            v-if="!isGenerating && hasAudio"
-            cx="60" cy="60" r="52"
-            fill="none"
-            stroke="var(--cs-action)"
-            stroke-width="6"
-          />
+          <circle v-if="!isGenerating && hasAudio" cx="60" cy="60" r="52" fill="none" stroke="var(--cs-action)"
+            stroke-width="6" />
         </svg>
       </div>
 
@@ -44,12 +26,33 @@
 
     <div class="playback-bar">
       <div class="playback-buttons">
-        <button class="btn btn-play" :disabled="isGenerating" @click="onPlayPause">
+        <AppButton variant="action" :disabled="isGenerating" @click="onPlayPause">
           {{ isPlaying ? 'Pause' : 'Play' }}
-        </button>
-        <button class="btn btn-stop" :disabled="isGenerating || !isPlaying" @click="onStop">
+        </AppButton>
+        <AppButton variant="surface" :disabled="isGenerating || !isPlaying" @click="onStop">
           Stop
-        </button>
+        </AppButton>
+      </div>
+
+      <div class="playback-nav">
+        <AppButton variant="surface" compact @click="goToPresets">
+          <template #icon-left>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 7H1m0 0l5-5M1 7l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </template>
+          Presets
+        </AppButton>
+        <AppButton variant="surface" compact @click="goToCustom">
+          Custom
+          <template #icon-right>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 7h12m0 0L8 2m5 5L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </template>
+        </AppButton>
       </div>
     </div>
   </div>
@@ -57,13 +60,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import AppButton from '../components/Buttons/AppButton.vue'
 import { useAudioEngine } from '../composables/useAudioEngine'
 import { PRESETS } from '../data/presets'
 import { AUDIO_SR } from '../engine/types'
 import type { SynthParams } from '../engine/types'
 
 const route = useRoute()
+const router = useRouter()
 
 const {
   generate,
@@ -114,6 +119,26 @@ function onPlayPause() {
 function onStop() {
   stopAudio()
   playbackTime.value = 0
+}
+
+// Map preset tag back to intent slug for navigation
+const TAG_TO_INTENT: Record<string, string> = {
+  'Sleep and rest': 'sleep',
+  'Anxiety reduction': 'anxiety',
+  'Cognitive enhancement': 'focus',
+}
+
+const intentSlug = computed(() => {
+  const match = presetKey.value.match(/\(([^)]+)\)$/)
+  return match ? TAG_TO_INTENT[match[1]] ?? 'sleep' : 'sleep'
+})
+
+function goToPresets() {
+  router.push({ name: 'guidance', params: { intent: intentSlug.value }, query: { page: '2' } })
+}
+
+function goToCustom() {
+  router.push({ name: 'synth' })
 }
 
 // Generate and auto-play on mount
@@ -200,42 +225,18 @@ onUnmounted(() => {
   padding-top: 16px;
 }
 
-.playback-buttons {
+.playback-buttons,
+.playback-nav {
   display: flex;
   gap: 10px;
 }
 
-.btn {
+.playback-buttons>*,
+.playback-nav>* {
   flex: 1;
-  padding: 16px;
-  font-size: 16px;
-  font-weight: 600;
-  font-family: inherit;
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  text-align: center;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s, transform 0.15s;
 }
 
-.btn:active {
-  opacity: 0.85;
-  transform: scale(0.97);
-}
-
-.btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.btn-play {
-  background: var(--cs-action);
-  color: var(--cs-bg);
-}
-
-.btn-stop {
-  background: var(--cs-surf);
-  color: var(--cs-text);
+.playback-nav {
+  margin-top: 10px;
 }
 </style>
