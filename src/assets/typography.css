@@ -17,6 +17,6 @@
 }
 
 .text-body--muted {
-  color: var(--cs-raised);
+  color: var(--cs-action);
   font-style: italic;
 }

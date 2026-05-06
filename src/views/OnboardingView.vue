@@ -35,9 +35,9 @@ const initialStep = route.query.step === '1' ? 1 : 0
 const step = ref(initialStep)
 
 const INTENTS = [
-  { label: 'Reduce anxiety', slug: 'anxiety' },
-  { label: 'Sleep better', slug: 'sleep' },
   { label: 'Increase focus', slug: 'focus' },
+  { label: 'Sleep better', slug: 'sleep' },
+  { label: 'Reduce anxiety', slug: 'anxiety' },
 ]
 
 onMounted(() => {

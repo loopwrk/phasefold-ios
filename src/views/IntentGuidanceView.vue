@@ -2,8 +2,7 @@
   <div class="guidance">
     <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">Soneuro</router-link>
     <Transition name="slide" mode="out-in">
-      <!-- Pages 0-1: guidance content -->
-      <div v-if="page < 2" :key="page" class="screen">
+      <div v-if="page < presetPageIndex" :key="page" class="screen">
         <div v-if="intentSlug === 'sleep' && page === 0" class="screen-content guidance-body">
           <div class="guidance-icon">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -14,33 +13,74 @@
                 stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>
-          <p class="text-body">Wear headphones and set to low-medium volume</p>
+          <p class="text-body">Wear headphones and set to
+            <br /> low-medium volume.
+          </p>
           <p class="text-body">Lie on your back, or whichever sleeping position is comfortable for you whilst
-            wearing headphones. Then, ask yourself: </p>
+            wearing headphones. Then, ask yourself, </p>
           <p class="text-body text-body--500">"What can I do to be just 1% more comfortable?"</p>
           <p class="text-body">Move your shoulders, adjust clothing, or wiggle your hips until you're in a position
             you'd be comfortable to fall
-            asleep in</p>
+            asleep in.</p>
           <p class="text-body text-body--muted">Ready? Let's continue</p>
         </div>
 
         <div v-else-if="intentSlug === 'sleep' && page === 1" class="screen-content guidance-body">
           <p class="text-body">Take a long, slow breath in through your nose, filling the lungs completely. Hold
-            it for just a second, and then let it out through your mouth with a soft sigh. Do this 3-5 times</p>
-          <p class="text-body">Then, let go of any control over the breath. Allow the body to breathe itself.
-            Observe the natural rise and fall of the navel without trying to change the pace.</p>
+            it for a few seconds, and then let it out through your mouth with a soft sigh. Do this 3-5 times</p>
+          <p class="text-body">Then, let go of any control over the breath. Allow the body to breathe naturally.</p>
           <p class="text-body text-body--muted">Now, let's begin</p>
         </div>
 
-        <!-- Generic fallback for pages without custom content -->
-        <div v-else class="screen-content">
-          <h1 class="page-title">{{ intentLabel }} - page {{ page + 1 }}</h1>
-          <p class="page-subtitle">{{ pageLabels[page] }}</p>
+        <!-- Anxiety - page 1 -->
+        <div v-else-if="intentSlug === 'anxiety' && page === 0" class="screen-content guidance-body">
+          <div class="guidance-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path
+                d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5Z"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <p class="text-body">Wear headphones and set to <br /> low-medium volume.</p>
+          <p class="text-body">If you'd like to, sit or lie down, but if you prefer where you are now, that's perfectly
+            fine.</p>
+          <p class="text-body text-body--muted">Ready? Let's continue</p>
+        </div>
+
+        <!-- Anxiety - page 2 -->
+        <div v-else-if="intentSlug === 'anxiety' && page === 1" class="screen-content guidance-body">
+
+          <p class="text-body">The audio is designed to start with more texture and movement. Over time, it gradually
+            softens, guiding you towards stillness.</p>
+          <p class="text-body">There's nothing you need to do - just listen. If at any point the sound feels like
+            too much, it's completely okay to take a break or stop.</p>
+          <p class="text-body text-body--muted">Now, let's begin</p>
+        </div>
+
+        <!-- Focus - page 1 -->
+        <div v-else-if="intentSlug === 'focus' && page === 0" class="screen-content guidance-body">
+          <div class="guidance-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path
+                d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5Z"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <p class="text-body">Wear headphones and set to <br /> low-medium volume.</p>
+          <p class="text-body">You can listen while you work, or simply close your eyes and let the audio be your
+            focus - either approach works well.</p>
+          <p class="text-body">If working, minimise distractions and if focusing on a specific task, have it ready
+            in front of you.</p>
+          <p class="text-body text-body--muted">Ready? Let's begin</p>
         </div>
 
         <div class="nav-bar">
           <div class="step-dots">
-            <span v-for="i in guidancePages" :key="i" :class="['dot', { active: i - 1 === page }]" />
+            <span v-for="i in totalPages" :key="i" :class="['dot', { active: i - 1 === page }]" />
           </div>
 
           <div class="nav-buttons">
@@ -66,7 +106,7 @@
 
         <div class="nav-bar">
           <div class="step-dots">
-            <span v-for="i in guidancePages" :key="i" :class="['dot', { active: i - 1 === page }]" />
+            <span v-for="i in totalPages" :key="i" :class="['dot', { active: i - 1 === page }]" />
           </div>
 
           <div class="nav-buttons">
@@ -91,7 +131,6 @@ const route = useRoute()
 const router = useRouter()
 const initialPage = Number(route.query.page) || 0
 const page = ref(initialPage)
-const guidancePages = 3 // pages 0, 1, 2 (dot indicators cover the guidance flow only)
 
 // Intent slug from route param (e.g. "sleep", "anxiety", "focus")
 const intentSlug = computed(() => route.params.intent as string)
@@ -109,13 +148,16 @@ const INTENT_CONFIG: Record<string, { label: string; pages: string[]; presetTag:
   },
   focus: {
     label: 'Increase focus',
-    pages: ['Setting your space', 'Attention priming', 'Choose a preset'],
+    pages: ['Setting your space', 'Choose a preset'],
     presetTag: 'Cognitive enhancement',
   },
 }
 
 const intentLabel = computed(() => INTENT_CONFIG[intentSlug.value]?.label ?? intentSlug.value)
 const pageLabels = computed(() => INTENT_CONFIG[intentSlug.value]?.pages ?? ['Page 1', 'Page 2', 'Page 3'])
+
+const totalPages = computed(() => INTENT_CONFIG[intentSlug.value]?.pages.length)
+const presetPageIndex = computed(() => totalPages.value - 1)
 
 // Filter presets by intent tag; return both the full key and a cleaned display name
 const intentPresets = computed(() => {
@@ -137,7 +179,7 @@ function selectPreset(presetKey: string) {
 }
 
 function advance() {
-  if (page.value < 2) {
+  if (page.value < presetPageIndex.value) {
     page.value++
   }
 }
