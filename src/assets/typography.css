@@ -1,0 +1,22 @@
+/*
+ * Naming convention:
+ *   .text-{role}            — base class
+ *   .text-{role}--{modifier} — variant
+ */
+/* ── Body / guidance text ──────────────────── */
+
+.text-body {
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--cs-text);
+  text-align: center;
+}
+
+.text-body--500 {
+  font-weight: 500;
+}
+
+.text-body--muted {
+  color: var(--cs-raised);
+  font-style: italic;
+}

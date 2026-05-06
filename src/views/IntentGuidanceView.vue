@@ -4,7 +4,36 @@
     <Transition name="slide" mode="out-in">
       <!-- Pages 0-1: guidance content -->
       <div v-if="page < 2" :key="page" class="screen">
-        <div class="screen-content">
+        <div v-if="intentSlug === 'sleep' && page === 0" class="screen-content guidance-body">
+          <div class="guidance-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                stroke-linejoin="round" />
+              <path
+                d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5Z"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <p class="text-body">Wear headphones and set to low-medium volume</p>
+          <p class="text-body">Lie on your back, or whichever sleeping position is comfortable for you whilst
+            wearing headphones. Then, ask yourself: </p>
+          <p class="text-body text-body--500">"What can I do to be just 1% more comfortable?"</p>
+          <p class="text-body">Move your shoulders, adjust clothing, or wiggle your hips until you're in a position
+            you'd be comfortable to fall
+            asleep in</p>
+          <p class="text-body text-body--muted">Ready? Let's continue</p>
+        </div>
+
+        <div v-else-if="intentSlug === 'sleep' && page === 1" class="screen-content guidance-body">
+          <p class="text-body">Take a long, slow breath in through your nose, filling the lungs completely. Hold
+            it for just a second, and then let it out through your mouth with a soft sigh. Do this 3-5 times</p>
+          <p class="text-body">Then, let go of any control over the breath. Allow the body to breathe itself.
+            Observe the natural rise and fall of the navel without trying to change the pace.</p>
+          <p class="text-body text-body--muted">Now, let's begin</p>
+        </div>
+
+        <!-- Generic fallback for pages without custom content -->
+        <div v-else class="screen-content">
           <h1 class="page-title">{{ intentLabel }} - page {{ page + 1 }}</h1>
           <p class="page-subtitle">{{ pageLabels[page] }}</p>
         </div>
@@ -30,12 +59,8 @@
         <div class="preset-screen">
           <h2 class="preset-heading">Choose a preset</h2>
           <div class="preset-list">
-            <PresetCard
-              v-for="preset in intentPresets"
-              :key="preset.key"
-              :name="preset.displayName"
-              @play="selectPreset(preset.key)"
-            />
+            <PresetCard v-for="preset in intentPresets" :key="preset.key" :name="preset.displayName"
+              @play="selectPreset(preset.key)" />
           </div>
         </div>
 
@@ -73,7 +98,7 @@ const intentSlug = computed(() => route.params.intent as string)
 
 const INTENT_CONFIG: Record<string, { label: string; pages: string[]; presetTag: string }> = {
   sleep: {
-    label: 'Fall asleep',
+    label: 'Sleep better',
     pages: ['Physical positioning', 'Breathing guidance', 'Choose a preset'],
     presetTag: 'Sleep and rest',
   },
@@ -227,6 +252,18 @@ function advance() {
 .btn-next {
   background: var(--cs-action);
   color: var(--cs-bg);
+}
+
+/* ── Guidance body (custom page content) ──── */
+
+.guidance-body {
+  justify-content: center;
+  gap: 20px;
+  padding: 0 8px;
+}
+
+.guidance-icon {
+  color: var(--cs-action);
 }
 
 .preset-screen {

@@ -36,7 +36,7 @@ const step = ref(initialStep)
 
 const INTENTS = [
   { label: 'Reduce anxiety', slug: 'anxiety' },
-  { label: 'Fall asleep', slug: 'sleep' },
+  { label: 'Sleep better', slug: 'sleep' },
   { label: 'Increase focus', slug: 'focus' },
 ]
 
