@@ -1,0 +1,49 @@
+{
+  "common": {
+    "back": "Back",
+    "next": "Next"
+  },
+  "guidance": {
+    "choosePreset": "Choose a preset",
+    "sleep": {
+      "label": "Sleep better",
+      "pages": ["Physical positioning", "Breathing guidance", "Choose a preset"],
+      "page0": {
+        "icon": "Wear headphones and set to\nlow-medium volume.",
+        "position": "Lie on your back, or whichever sleeping position is comfortable for you whilst wearing headphones. Then, ask yourself,",
+        "prompt": "\"What can I do to be just 1% more comfortable?\"",
+        "adjust": "Move your shoulders, adjust clothing, or wiggle your hips until you're in a position you'd be comfortable to fall asleep in.",
+        "cta": "Ready? Let's continue"
+      },
+      "page1": {
+        "breathe": "Take a long, slow breath in through your nose, filling the lungs completely. Hold it for a few seconds, and then let it out through your mouth with a soft sigh. Do this 3-5 times",
+        "release": "Then, let go of any control over the breath. Allow the body to breathe naturally.",
+        "cta": "Now, let's begin"
+      }
+    },
+    "anxiety": {
+      "label": "Reduce anxiety",
+      "pages": ["Grounding", "Breathing guidance", "Choose a preset"],
+      "page0": {
+        "icon": "Wear headphones and set to\nlow-medium volume.",
+        "comfort": "If you'd like to, sit or lie down, but if you prefer where you are now, that's perfectly fine.",
+        "cta": "Ready? Let's continue"
+      },
+      "page1": {
+        "arc": "The audio is designed to start with more texture and movement. Over time, it gradually softens, guiding you towards stillness.",
+        "permission": "There's nothing you need to do - just listen. If at any point the sound feels like too much, it's completely okay to take a break or stop.",
+        "cta": "Now, let's begin"
+      }
+    },
+    "focus": {
+      "label": "Increase focus",
+      "pages": ["Setting your space", "Choose a preset"],
+      "page0": {
+        "icon": "Wear headphones and set to\nlow-medium volume.",
+        "approach": "You can listen while you work, or simply close your eyes and let the audio be your focus - either approach works well.",
+        "distractions": "If working, minimise distractions and if focusing on a specific task, have it ready in front of you.",
+        "cta": "Ready? Let's begin"
+      }
+    }
+  }
+}

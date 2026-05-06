@@ -2,9 +2,10 @@
   <div class="guidance">
     <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">Soneuro</router-link>
     <Transition name="slide" mode="out-in">
+
       <div v-if="page < presetPageIndex" :key="page" class="screen">
-        <div v-if="intentSlug === 'sleep' && page === 0" class="screen-content guidance-body">
-          <div class="guidance-icon">
+        <div class="screen-content guidance-body">
+          <div v-if="currentPage.showIcon" class="guidance-icon">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
                 stroke-linejoin="round" />
@@ -13,69 +14,11 @@
                 stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>
-          <p class="text-body">Wear headphones and set to
-            <br /> low-medium volume.
-          </p>
-          <p class="text-body">Lie on your back, or whichever sleeping position is comfortable for you whilst
-            wearing headphones. Then, ask yourself, </p>
-          <p class="text-body text-body--500">"What can I do to be just 1% more comfortable?"</p>
-          <p class="text-body">Move your shoulders, adjust clothing, or wiggle your hips until you're in a position
-            you'd be comfortable to fall
-            asleep in.</p>
-          <p class="text-body text-body--muted">Ready? Let's continue</p>
-        </div>
 
-        <div v-else-if="intentSlug === 'sleep' && page === 1" class="screen-content guidance-body">
-          <p class="text-body">Take a long, slow breath in through your nose, filling the lungs completely. Hold
-            it for a few seconds, and then let it out through your mouth with a soft sigh. Do this 3-5 times</p>
-          <p class="text-body">Then, let go of any control over the breath. Allow the body to breathe naturally.</p>
-          <p class="text-body text-body--muted">Now, let's begin</p>
-        </div>
-
-        <!-- Anxiety - page 1 -->
-        <div v-else-if="intentSlug === 'anxiety' && page === 0" class="screen-content guidance-body">
-          <div class="guidance-icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                stroke-linejoin="round" />
-              <path
-                d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5Z"
-                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <p class="text-body">Wear headphones and set to <br /> low-medium volume.</p>
-          <p class="text-body">If you'd like to, sit or lie down, but if you prefer where you are now, that's perfectly
-            fine.</p>
-          <p class="text-body text-body--muted">Ready? Let's continue</p>
-        </div>
-
-        <!-- Anxiety - page 2 -->
-        <div v-else-if="intentSlug === 'anxiety' && page === 1" class="screen-content guidance-body">
-
-          <p class="text-body">The audio is designed to start with more texture and movement. Over time, it gradually
-            softens, guiding you towards stillness.</p>
-          <p class="text-body">There's nothing you need to do - just listen. If at any point the sound feels like
-            too much, it's completely okay to take a break or stop.</p>
-          <p class="text-body text-body--muted">Now, let's begin</p>
-        </div>
-
-        <!-- Focus - page 1 -->
-        <div v-else-if="intentSlug === 'focus' && page === 0" class="screen-content guidance-body">
-          <div class="guidance-icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                stroke-linejoin="round" />
-              <path
-                d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5Z"
-                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <p class="text-body">Wear headphones and set to <br /> low-medium volume.</p>
-          <p class="text-body">You can listen while you work, or simply close your eyes and let the audio be your
-            focus - either approach works well.</p>
-          <p class="text-body">If working, minimise distractions and if focusing on a specific task, have it ready
-            in front of you.</p>
-          <p class="text-body text-body--muted">Ready? Let's begin</p>
+          <!-- Body paragraphs -->
+          <p v-for="(para, i) in currentPage.body" :key="i"
+            :class="['text-body', para.modifier ? `text-body--${para.modifier}` : '']" v-html="para.text" />
+          <p class="text-body text-body--muted">{{ currentPage.cta }}</p>
         </div>
 
         <div class="nav-bar">
@@ -85,19 +28,19 @@
 
           <div class="nav-buttons">
             <button v-if="page > 0" class="btn btn-back" @click="page--">
-              Back
+              {{ t('common.back') }}
             </button>
             <button class="btn btn-next" @click="advance">
-              Next
+              {{ t('common.next') }}
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Page 2: preset picker -->
+      <!-- Preset picker -->
       <div v-else key="presets" class="screen">
         <div class="preset-screen">
-          <h2 class="preset-heading">Choose a preset</h2>
+          <h2 class="preset-heading">{{ t('guidance.choosePreset') }}</h2>
           <div class="preset-list">
             <PresetCard v-for="preset in intentPresets" :key="preset.key" :name="preset.displayName"
               @play="selectPreset(preset.key)" />
@@ -111,7 +54,7 @@
 
           <div class="nav-buttons">
             <button class="btn btn-back" @click="page--">
-              Back
+              {{ t('common.back') }}
             </button>
           </div>
         </div>
@@ -123,10 +66,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import PresetCard from '../components/Cards/PresetCard.vue'
 import { PRESETS } from '../data/presets'
 import { warmup } from '../engine/audioContext'
 
+const { t, tm } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const initialPage = Number(route.query.page) || 0
@@ -135,33 +80,89 @@ const page = ref(initialPage)
 // Intent slug from route param (e.g. "sleep", "anxiety", "focus")
 const intentSlug = computed(() => route.params.intent as string)
 
-const INTENT_CONFIG: Record<string, { label: string; pages: string[]; presetTag: string }> = {
-  sleep: {
-    label: 'Sleep better',
-    pages: ['Physical positioning', 'Breathing guidance', 'Choose a preset'],
-    presetTag: 'Sleep and rest',
-  },
-  anxiety: {
-    label: 'Reduce anxiety',
-    pages: ['Grounding', 'Breathing guidance', 'Choose a preset'],
-    presetTag: 'Anxiety reduction',
-  },
-  focus: {
-    label: 'Increase focus',
-    pages: ['Setting your space', 'Choose a preset'],
-    presetTag: 'Cognitive enhancement',
-  },
+// Page content definition: show icon?, body paragraphs, and optional
+// text modifier Driven entirely by the locale JSON
+
+interface GuidancePara {
+  text: string
+  modifier?: string
 }
 
-const intentLabel = computed(() => INTENT_CONFIG[intentSlug.value]?.label ?? intentSlug.value)
-const pageLabels = computed(() => INTENT_CONFIG[intentSlug.value]?.pages ?? ['Page 1', 'Page 2', 'Page 3'])
+interface GuidancePage {
+  showIcon?: boolean
+  body: GuidancePara[]
+  cta: string
+}
 
-const totalPages = computed(() => INTENT_CONFIG[intentSlug.value]?.pages.length)
-const presetPageIndex = computed(() => totalPages.value - 1)
+// Maps each intent to its ordered guidance pages.
+const PAGE_DEFS: Record<string, (t: (key: string) => string) => GuidancePage[]> = {
+  sleep: (t) => [
+    {
+      showIcon: true,
+      body: [
+        { text: t('guidance.sleep.page0.icon') },
+        { text: t('guidance.sleep.page0.position') },
+        { text: t('guidance.sleep.page0.prompt'), modifier: '500' },
+        { text: t('guidance.sleep.page0.adjust') },
+      ],
+      cta: t('guidance.sleep.page0.cta'),
+    },
+    {
+      body: [
+        { text: t('guidance.sleep.page1.breathe') },
+        { text: t('guidance.sleep.page1.release') },
+      ],
+      cta: t('guidance.sleep.page1.cta'),
+    },
+  ],
+  anxiety: (t) => [
+    {
+      showIcon: true,
+      body: [
+        { text: t('guidance.anxiety.page0.icon') },
+        { text: t('guidance.anxiety.page0.comfort') },
+      ],
+      cta: t('guidance.anxiety.page0.cta'),
+    },
+    {
+      body: [
+        { text: t('guidance.anxiety.page1.arc') },
+        { text: t('guidance.anxiety.page1.permission') },
+      ],
+      cta: t('guidance.anxiety.page1.cta'),
+    },
+  ],
+  focus: (t) => [
+    {
+      showIcon: true,
+      body: [
+        { text: t('guidance.focus.page0.icon') },
+        { text: t('guidance.focus.page0.approach') },
+        { text: t('guidance.focus.page0.distractions') },
+      ],
+      cta: t('guidance.focus.page0.cta'),
+    },
+  ],
+}
+
+const INTENT_PRESET_TAGS: Record<string, string> = {
+  sleep: 'Sleep and rest',
+  anxiety: 'Anxiety reduction',
+  focus: 'Cognitive enhancement',
+}
+
+const guidancePages = computed(() => PAGE_DEFS[intentSlug.value]?.(t) ?? [])
+const currentPage = computed<GuidancePage>(() =>
+  guidancePages.value[page.value] ?? { body: [], cta: '' }
+)
+
+// Total pages = guidance steps + 1 for the preset picker
+const totalPages = computed(() => guidancePages.value.length + 1)
+const presetPageIndex = computed(() => guidancePages.value.length)
 
 // Filter presets by intent tag; return both the full key and a cleaned display name
 const intentPresets = computed(() => {
-  const tag = INTENT_CONFIG[intentSlug.value]?.presetTag
+  const tag = INTENT_PRESET_TAGS[intentSlug.value]
   if (!tag) return []
   return Object.keys(PRESETS)
     .filter((name) => name.includes(`(${tag})`))
