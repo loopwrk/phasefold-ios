@@ -62,6 +62,16 @@
       }
     }
   },
+  "about": {
+    "whatYoullHear": "What you'll hear",
+    "whatYoullHearIntro": "Soneuro generates therapeutic audio designed to guide your mind from its current state toward deep rest, focus, or calm. Every session is unique - created in real time by a mathematical engine, not pulled from a library of recordings. There are no loops, no samples, no nature sounds. Just pure, evolving tone.",
+    "whatYoullHearDescription": "A session begins with a single, steady tone - your anchor for the entire journey. Within a few seconds, layered tones emerge around it, each slightly detuned from the others, creating a warm, shimmering texture. You'll hear gentle harmonic movement, subtle shifts in spatial width between your ears, and a slow, breathing quality to the sound. As the session progresses, the tones gradually tune toward each other, harmonics simplify, and the spatial movement settles. The sound doesn't just fade out - it resolves, like an ensemble finding a single note together, before easing into silence.",
+    "howItWorks": "How it works",
+    "howItWorksP1": "Most sound therapy apps play you a fixed recording: a rainstorm, a drone, a binaural tone. Soneuro takes a different approach. It builds each session from scratch using an algorithm grounded in a principle from music therapy called the iso principle.",
+    "howItWorksP2": "The idea is simple: therapeutic sound should first match where you are, then gradually guide you where you want to go. A session begins with rich, complex sound - multiple tonal layers, each pitched fractionally apart from the others, creating the kind of shimmering warmth you hear when a choir or string section plays almost-but-not-quite in unison. This complexity mirrors the busy state of an active mind. Over the course of the session, everything converges. This arc isn't decorative. It's computed into every parameter of the audio simultaneously, so the transition feels organic rather than mechanical.",
+    "howItWorksP3": "Underneath this structure, two forms of neural entrainment work together. The first is binaural beating: a slightly different frequency is sent to each ear, and your brain perceives a gentle pulse at the difference between them. Research suggests this encourages your neural activity to follow along - slower pulses for sleep, faster ones for focus. The second is breath-rate entrainment: the spatial quality of the sound - how wide or close it feels - shifts at a slow, steady rhythm designed to influence your breathing rate without you needing to think about it. Both of these mechanisms are phase-locked to the same oscillator, so they reinforce each other rather than competing.",
+    "howItWorksP4": "None of this is random. Each session is generated from a deterministic seed, meaning the same preset always produces the same audio. When you find a session that works for you, it will work the same way every time."
+  },
   "playback": {
     "generatingProgress": "Generating… {progress}%",
     "playing": "Playing",

@@ -9,7 +9,7 @@ export interface PresetValues {
 }
 
 export const PRESETS: Record<string, PresetValues> = {
-  "Delta - Neutral Awareness (Sleep and rest)": {
+  "Delta - Weightless Tide (Sleep and rest)": {
     dur: 360,
     baseF0: 72.0,
     voices: 5,
@@ -39,6 +39,16 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.6,
   },
 
+  "Delta - Nightfall Resonance (Sleep and rest)": {
+    dur: 540,
+    baseF0: 110.0,
+    voices: 4,
+    layers: 2,
+    breathRate: 0.012, // Restorative
+    binauralDeltaHz0: 3.4,
+    binauralAmount: 0.15,
+  },
+
   "Theta - Quieting the Storm (Anxiety reduction)": {
     dur: 500,
     baseF0: 67.0,
@@ -49,7 +59,7 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.5,
   },
 
-  "Theta - Earth Resonance (Anxiety reduction)": {
+  "Theta - Deep Swell (Anxiety reduction)": {
     dur: 300,
     baseF0: 62.0,
     voices: 2,
@@ -63,7 +73,7 @@ export const PRESETS: Record<string, PresetValues> = {
   // RCT on MDD (ScienceDirect S0965229921001060)
   // showed significant improvement in cognitive flexibility and working memory;
   // visual entrainment study found 10 Hz superior analgesic effect vs 8 and 12 Hz.
-  "Alpha - Inner Light (Anxiety reduction)": {
+  "Alpha - Cascades to Stillness (Anxiety reduction)": {
     dur: 300,
     baseF0: 136.1,
     voices: 5,
@@ -77,7 +87,7 @@ export const PRESETS: Record<string, PresetValues> = {
   // Low base frequency (G2) and rich odd harmonics produce a warm,
   // deep timbre; slow restorative breath and high layer count give
   // the sound a sustained, enveloping quality over 7.5 minutes.
-  "Alpha - Deep Ember (Anxiety reduction)": {
+  "Alpha - The Slow Unravelling (Anxiety reduction)": {
     dur: 450,
     baseF0: 96.0,
     voices: 7,
@@ -90,7 +100,7 @@ export const PRESETS: Record<string, PresetValues> = {
   // 8.5 Hz: alpha-theta crossover, the hypnagogic boundary.
   // Multiple studies cite this border as optimal for meditative entrainment,
   // creativity, and the transition between waking awareness and dreaming.
-  "Alpha - Twilight Threshold (Anxiety reduction)": {
+  "Alpha - Weightless Awakening (Anxiety reduction)": {
     dur: 400,
     baseF0: 108.0,
     voices: 3,
@@ -100,7 +110,7 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.3,
   },
 
-  "Beta - Wolf Moon": {
+  "Beta - Uncategorised": {
     dur: 120,
     baseF0: 196.0,
     voices: 2,
@@ -126,7 +136,7 @@ export const PRESETS: Record<string, PresetValues> = {
   // stimulation showed increased gamma power and reduced amyloid-beta
   // plaques in Alzheimer's mouse models (Iaccarino et al., Nature 2016).
   // Human studies show enhanced c ognitive binding and working memory.
-  "Gamma - Solar Wind (Cognitive enhancement)": {
+  "Gamma - Lucidity Arising (Cognitive enhancement)": {
     dur: 300,
     baseF0: 138.6,
     voices: 3,
@@ -136,8 +146,8 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.4,
   },
 
-  "Gamma - Golden Spiral (Cognitive enhancement)": {
-    dur: 300,
+  "Gamma - Flow State (Cognitive enhancement)": {
+    dur: 320,
     baseF0: 196.0,
     voices: 4,
     layers: 2,
@@ -146,7 +156,7 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.4,
   },
 
-  "Gamma - Interwoven (Cognitive enhancement)": {
+  "Gamma - Pulsing Precision (Cognitive enhancement)": {
     dur: 200,
     baseF0: 110.0,
     voices: 2,
@@ -156,18 +166,8 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.4,
   },
 
-  "Gamma - Bioluminescence (Cognitive enhancement)": {
-    dur: 200,
-    baseF0: 165.0,
-    voices: 6,
-    layers: 3,
-    breathRate: 0.05,
-    binauralDeltaHz0: 42.0,
-    binauralAmount: 0.35,
-  },
-
-  "Gamma - Oceanic Thoughts (Cognitive enhancement)": {
-    dur: 300,
+  "Gamma - Unwavering Clarity (Cognitive enhancement)": {
+    dur: 320,
     baseF0: 136.1,
     voices: 9,
     layers: 5,
@@ -176,7 +176,7 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.02,
   },
 
-  "Gamma - Impermanence (Cognitive enhancement)": {
+  "Gamma - Spark of Insight (Cognitive enhancement)": {
     dur: 120,
     baseF0: 132.0,
     voices: 5,
@@ -186,7 +186,7 @@ export const PRESETS: Record<string, PresetValues> = {
     binauralAmount: 0.4,
   },
 
-  "Gamma - Tidal Shift (Cognitive enhancement)": {
+  "Gamma - Neural Massage (Cognitive enhancement)": {
     dur: 240,
     baseF0: 110.0,
     voices: 3,

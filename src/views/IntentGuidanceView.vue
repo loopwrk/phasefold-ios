@@ -1,6 +1,12 @@
 <template>
   <div class="guidance">
-    <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName') }}</router-link>
+    <div class="top-bar">
+      <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName')
+      }}</router-link>
+      <AppButton variant="surface" icon @click="goToHowItWorks">
+        <AppIcon name="question" :size="24" />
+      </AppButton>
+    </div>
     <Transition name="slide" mode="out-in">
 
       <div v-if="page < presetPageIndex" :key="page" class="screen">
@@ -61,6 +67,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import AppButton from '../components/Buttons/AppButton.vue'
 import AppIcon from '../components/Icons/AppIcon.vue'
 import PresetCard from '../components/Cards/PresetCard.vue'
 import { PRESETS } from '../data/presets'
@@ -174,6 +181,10 @@ function selectPreset(presetKey: string) {
   router.push({ name: 'playback', params: { preset: presetKey } })
 }
 
+function goToHowItWorks() {
+  router.push({ name: 'about' })
+}
+
 function advance() {
   if (page.value < presetPageIndex.value) {
     page.value++
@@ -188,15 +199,20 @@ function advance() {
   position: relative;
 }
 
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 32px 0;
+  min-height: 52px;
+  z-index: 1;
+}
+
 .logo {
-  position: absolute;
-  top: calc(16px + env(safe-area-inset-top, 0px));
-  left: 32px;
   font-size: 18px;
   font-weight: 700;
   color: var(--cs-text);
   text-decoration: none;
-  z-index: 1;
   -webkit-tap-highlight-color: transparent;
 }
 

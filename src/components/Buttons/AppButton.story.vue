@@ -47,5 +47,15 @@ import AppIcon from "../Icons/AppIcon.vue";
         </template>
       </AppButton>
     </Variant>
+    <Variant title="Icon only (surface)">
+      <AppButton variant="surface" icon>
+        <AppIcon name="question" :size="16" />
+      </AppButton>
+    </Variant>
+    <Variant title="Icon only (action)">
+      <AppButton variant="action" icon>
+        <AppIcon name="play" :size="16" />
+      </AppButton>
+    </Variant>
   </Story>
 </template>

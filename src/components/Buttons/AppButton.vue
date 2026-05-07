@@ -1,14 +1,20 @@
 <template>
-  <button :class="['app-btn', `app-btn--${variant}`, { 'app-btn--compact': compact }]" :disabled="disabled">
-    <span v-if="$slots['icon-left']" class="app-btn__icon">
-      <slot name="icon-left" />
-    </span>
-    <span class="app-btn__label">
+  <button :class="['app-btn', `app-btn--${variant}`, { 'app-btn--compact': compact, 'app-btn--icon': icon }]"
+    :disabled="disabled">
+    <template v-if="icon">
       <slot />
-    </span>
-    <span v-if="$slots['icon-right']" class="app-btn__icon">
-      <slot name="icon-right" />
-    </span>
+    </template>
+    <template v-else>
+      <span v-if="$slots['icon-left']" class="app-btn__icon">
+        <slot name="icon-left" />
+      </span>
+      <span class="app-btn__label">
+        <slot />
+      </span>
+      <span v-if="$slots['icon-right']" class="app-btn__icon">
+        <slot name="icon-right" />
+      </span>
+    </template>
   </button>
 </template>
 
@@ -17,11 +23,13 @@ withDefaults(
   defineProps<{
     variant?: 'default' | 'action' | 'surface'
     compact?: boolean
+    icon?: boolean
     disabled?: boolean
   }>(),
   {
     variant: 'default',
     compact: false,
+    icon: false,
     disabled: false,
   },
 )
@@ -78,6 +86,16 @@ withDefaults(
   padding: 10px 16px;
   font-size: 14px;
   border-radius: 10px;
+}
+
+/* ── Icon-only (circle) ───────────────────── */
+
+.app-btn--icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* ── Icon slots ────────────────────────────── */
