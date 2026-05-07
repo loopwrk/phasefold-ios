@@ -45,6 +45,8 @@ export function useAudioEngine() {
   let startedAt = 0;
   let startOffset = 0;
   let playbackId = 0; // monotonic counter to identify the current source
+  let activeWorker: Worker | null = null; // current generation worker
+  let activeReject: ((reason: Error) => void) | null = null;
 
   const isPlaying = ref(false);
   const isGenerating = ref(false);
@@ -86,18 +88,25 @@ export function useAudioEngine() {
    * generated StereoAudio. Progress is exposed via generationProgress ref.
    */
   function generate(params: SynthParams): Promise<StereoAudio> {
-    isGenerating.value = true;
-    generationProgress.value = 0;
+    // Cancel any in-flight generation before starting a new one
+    cancelGeneration();
 
     // Invalidate cached buffer from previous generation
     cachedBuffer = null;
     audioDuration = 0;
+
+    // Set generating state AFTER cancelGeneration has cleared it
+    isGenerating.value = true;
+    generationProgress.value = 0;
 
     return new Promise<StereoAudio>((resolve, reject) => {
       const worker = new Worker(
         new URL("../engine/audio.worker.ts", import.meta.url),
         { type: "module" },
       );
+
+      activeWorker = worker;
+      activeReject = reject;
 
       worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
         const msg = e.data;
@@ -108,7 +117,6 @@ export function useAudioEngine() {
             break;
 
           case "result": {
-            // Reconstruct StereoAudio from transferred buffers
             const audio: StereoAudio = {
               left: msg.left,
               right: msg.right,
@@ -117,6 +125,8 @@ export function useAudioEngine() {
             currentAudio.value = audio;
             isGenerating.value = false;
             generationProgress.value = 100;
+            activeWorker = null;
+            activeReject = null;
             worker.terminate();
             resolve(audio);
             break;
@@ -125,6 +135,8 @@ export function useAudioEngine() {
           case "error":
             isGenerating.value = false;
             generationProgress.value = 0;
+            activeWorker = null;
+            activeReject = null;
             worker.terminate();
             reject(new Error(msg.message));
             break;
@@ -134,11 +146,12 @@ export function useAudioEngine() {
       worker.onerror = (e) => {
         isGenerating.value = false;
         generationProgress.value = 0;
+        activeWorker = null;
+        activeReject = null;
         worker.terminate();
         reject(new Error(e.message || "Worker failed"));
       };
 
-      // Send params to the worker
       const request: WorkerRequest = { type: "generate", params };
       worker.postMessage(request);
     });
@@ -201,6 +214,19 @@ export function useAudioEngine() {
     tick();
   }
 
+  /** Cancel an in-flight generation, terminating the worker immediately. */
+  function cancelGeneration() {
+    if (activeWorker) {
+      activeWorker.terminate();
+      activeWorker = null;
+    }
+    if (activeReject) {
+      activeReject = null;
+    }
+    isGenerating.value = false;
+    generationProgress.value = 0;
+  }
+
   /** Stop playback. */
   function stop() {
     // Set isPlaying FIRST so that any subsequent onended callback
@@ -247,6 +273,7 @@ export function useAudioEngine() {
 
   return {
     generate,
+    cancelGeneration,
     play,
     stop,
     exportWav,

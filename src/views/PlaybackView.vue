@@ -70,6 +70,7 @@ const router = useRouter()
 
 const {
   generate,
+  cancelGeneration,
   play: playAudio,
   stop: stopAudio,
   isPlaying,
@@ -152,8 +153,9 @@ onMounted(async () => {
   }
 })
 
-// Stop playback if navigating away
+// Stop playback and cancel any in-flight generation on navigation
 onUnmounted(() => {
+  cancelGeneration()
   stopAudio()
 })
 </script>
