@@ -55,7 +55,6 @@ const router = useRouter()
   align-items: center;
   justify-content: space-between;
   padding: calc(16px + env(safe-area-inset-top, 0px)) 32px 0;
-  min-height: 52px;
   flex-shrink: 0;
 }
 

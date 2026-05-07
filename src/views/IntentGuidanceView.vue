@@ -201,10 +201,9 @@ function advance() {
 
 .top-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding: calc(16px + env(safe-area-inset-top, 0px)) 32px 0;
-  min-height: 52px;
   z-index: 1;
 }
 
@@ -222,7 +221,7 @@ function advance() {
   height: 100%;
   padding: 0 32px;
   padding-top: calc(24px + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
 }
 
 .screen-content {
