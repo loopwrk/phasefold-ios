@@ -221,7 +221,9 @@ export function useAudioEngine() {
       activeWorker = null;
     }
     if (activeReject) {
+      const reject = activeReject;
       activeReject = null;
+      reject(new Error("Generation cancelled"));
     }
     isGenerating.value = false;
     generationProgress.value = 0;

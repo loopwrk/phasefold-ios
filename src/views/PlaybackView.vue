@@ -133,7 +133,7 @@ const intentSlug = computed(() => {
 })
 
 function goToPresets() {
-  router.push({ name: 'guidance', params: { intent: intentSlug.value }, query: { page: '2' } })
+  router.push({ name: 'guidance', params: { intent: intentSlug.value }, query: { page: 'presets' } })
 }
 
 function goToCustom() {

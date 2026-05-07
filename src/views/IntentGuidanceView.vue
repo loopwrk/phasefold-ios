@@ -2,7 +2,7 @@
   <div class="guidance">
     <div class="top-bar">
       <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName')
-      }}</router-link>
+        }}</router-link>
       <AppButton variant="surface" icon @click="goToHowItWorks">
         <AppIcon name="question" :size="24" />
       </AppButton>
@@ -76,11 +76,17 @@ import { warmup } from '../engine/audioContext'
 const { t, tm } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const initialPage = Number(route.query.page) || 0
-const page = ref(initialPage)
-
-// Intent slug from route param (e.g. "sleep", "anxiety", "focus")
 const intentSlug = computed(() => route.params.intent as string)
+
+function resolveInitialPage(): number {
+  const pageQuery = route.query.page as string | undefined
+  if (pageQuery === 'presets') {
+    const defs = PAGE_DEFS[route.params.intent as string]
+    return defs ? defs(t).length : 0
+  }
+  return Number(pageQuery) || 0
+}
+const page = ref(resolveInitialPage())
 
 // Page content definition: show icon?, body paragraphs, and optional
 // text modifier Driven entirely by the locale JSON
