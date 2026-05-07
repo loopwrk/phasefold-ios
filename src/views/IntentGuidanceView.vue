@@ -6,13 +6,7 @@
       <div v-if="page < presetPageIndex" :key="page" class="screen">
         <div class="screen-content guidance-body">
           <div v-if="currentPage.showIcon" class="guidance-icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                stroke-linejoin="round" />
-              <path
-                d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5ZM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5Z"
-                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            <AppIcon name="headphones" :size="40" />
           </div>
 
           <!-- Body paragraphs -->
@@ -67,6 +61,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import AppIcon from '../components/Icons/AppIcon.vue'
 import PresetCard from '../components/Cards/PresetCard.vue'
 import { PRESETS } from '../data/presets'
 import { warmup } from '../engine/audioContext'

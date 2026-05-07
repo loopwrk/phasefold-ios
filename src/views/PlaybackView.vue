@@ -1,6 +1,7 @@
 <template>
   <div class="playback">
-    <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName') }}</router-link>
+    <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName')
+      }}</router-link>
 
     <div class="playback-content">
       <!-- Progress ring / playing state -->
@@ -37,20 +38,14 @@
       <div class="playback-nav">
         <AppButton variant="surface" compact @click="goToPresets">
           <template #icon-left>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M13 7H1m0 0l5-5M1 7l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" />
-            </svg>
+            <AppIcon name="arrow-left" :size="14" />
           </template>
           {{ t('playback.presets') }}
         </AppButton>
         <AppButton variant="surface" compact @click="goToCustom">
           {{ t('playback.custom') }}
           <template #icon-right>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M1 7h12m0 0L8 2m5 5L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" />
-            </svg>
+            <AppIcon name="pencil" :size="14" />
           </template>
         </AppButton>
       </div>
@@ -63,6 +58,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import AppButton from '../components/Buttons/AppButton.vue'
+import AppIcon from '../components/Icons/AppIcon.vue'
 import { useAudioEngine } from '../composables/useAudioEngine'
 import { PRESETS } from '../data/presets'
 import { AUDIO_SR } from '../engine/types'

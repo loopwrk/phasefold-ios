@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppButton from "./AppButton.vue";
+import AppIcon from "../Icons/AppIcon.vue";
 </script>
 
 <template>
@@ -19,9 +20,7 @@ import AppButton from "./AppButton.vue";
     <Variant title="Icon left">
       <AppButton variant="action">
         <template #icon-left>
-          <svg width="16" height="18" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 1.54v14.92a1 1 0 0 0 1.5.87l12.5-7.46a1 1 0 0 0 0-1.74L2.5.67A1 1 0 0 0 1 1.54Z" fill="currentColor" />
-          </svg>
+          <AppIcon name="play" :size="16" />
         </template>
         Play
       </AppButton>
@@ -35,9 +34,7 @@ import AppButton from "./AppButton.vue";
     <Variant title="Compact with icon">
       <AppButton variant="action" compact>
         <template #icon-left>
-          <svg width="14" height="16" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 1.54v14.92a1 1 0 0 0 1.5.87l12.5-7.46a1 1 0 0 0 0-1.74L2.5.67A1 1 0 0 0 1 1.54Z" fill="currentColor" />
-          </svg>
+          <AppIcon name="play" :size="14" />
         </template>
         Play
       </AppButton>
@@ -46,9 +43,7 @@ import AppButton from "./AppButton.vue";
       <AppButton variant="action">
         Continue
         <template #icon-right>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M1 7h12m0 0L8 2m5 5L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <AppIcon name="arrow-right" :size="14" />
         </template>
       </AppButton>
     </Variant>
