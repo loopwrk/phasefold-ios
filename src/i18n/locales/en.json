@@ -1,7 +1,23 @@
 {
   "common": {
     "back": "Back",
-    "next": "Next"
+    "next": "Next",
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "save": "Save",
+    "generate": "Generate",
+    "generating": "Generating…"
+  },
+  "onboarding": {
+    "welcomeTo": "Welcome to",
+    "appName": "Soneuro",
+    "intentQuestion": "What can {appName} help you with today?",
+    "intents": {
+      "focus": "Increase focus",
+      "sleep": "Sleep better",
+      "anxiety": "Reduce anxiety"
+    }
   },
   "guidance": {
     "choosePreset": "Choose a preset",
@@ -44,6 +60,80 @@
         "distractions": "If working, minimise distractions and if focusing on a specific task, have it ready in front of you.",
         "cta": "Ready? Let's begin"
       }
+    }
+  },
+  "playback": {
+    "generatingProgress": "Generating… {progress}%",
+    "playing": "Playing",
+    "presets": "Presets",
+    "custom": "Custom"
+  },
+  "synth": {
+    "title": "Phasefold",
+    "subtitle": "Generative harmonic synth",
+    "sections": {
+      "preset": "Preset",
+      "core": "Core",
+      "temporal": "Temporal",
+      "spatial": "Spatial"
+    },
+    "params": {
+      "duration": "Duration",
+      "baseFrequency": "Base frequency",
+      "voicesPerLayer": "Voices per layer",
+      "layers": "Layers",
+      "breathRate": "Breath rate",
+      "breathSubtitle": "The pace at which the sound breathes - slower draws you deeper inward",
+      "mindState": "Mind state",
+      "binauralMix": "Binaural mix"
+    },
+    "paramInfo": {
+      "duration": "How long the piece evolves for over time.",
+      "baseFrequency": "The pitch everything is built around. 60-120 Hz feels grounded; 150-300 Hz feels bright.",
+      "voicesPerLayer": "More voices = richer, thicker sound with more motion.",
+      "layers": "Depth of recursion. 1-4 = clear/structural, 4+ = complex folding sound fields.",
+      "breathRate": "Sets the pace of the spatial breathing cycle. Also gently modulates the binaural beat frequency for a slowly drifting entrainment effect.",
+      "binauralMix": "How much binaural bed is mixed under the main signal.",
+      "noDescription": "No description available."
+    },
+    "breathStates": {
+      "formless": "Formless",
+      "restorative": "Restorative",
+      "meditative": "Meditative",
+      "relaxed": "Relaxed",
+      "awakened": "Awakened"
+    },
+    "mindStates": {
+      "delta": {
+        "name": "Delta",
+        "description": "Surrender into deep, restorative sleep"
+      },
+      "theta": {
+        "name": "Theta",
+        "description": "The edge of dreaming - deep meditative release"
+      },
+      "alpha": {
+        "name": "Alpha",
+        "description": "Soft, restful awareness - the hypnagogic threshold"
+      },
+      "beta": {
+        "name": "Beta",
+        "description": "Soft focus and clear, present-moment alertness"
+      },
+      "gamma": {
+        "name": "Gamma",
+        "description": "Heightened perception and sensitive awareness"
+      }
+    },
+    "status": {
+      "ready": "Ready",
+      "generatingProgress": "Generating… {progress}%",
+      "generated": "Generated {dur} s at {rate} Hz",
+      "playing": "Playing…",
+      "paused": "Paused",
+      "stopped": "Stopped",
+      "exported": "WAV exported",
+      "error": "Error: {message}"
     }
   }
 }

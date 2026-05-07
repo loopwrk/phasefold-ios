@@ -1,6 +1,6 @@
 <template>
   <div class="guidance">
-    <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">Soneuro</router-link>
+    <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName') }}</router-link>
     <Transition name="slide" mode="out-in">
 
       <div v-if="page < presetPageIndex" :key="page" class="screen">

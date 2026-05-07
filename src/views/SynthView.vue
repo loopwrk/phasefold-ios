@@ -1,14 +1,14 @@
 <template>
   <div class="synth-view">
     <header class="app-header">
-      <h1>Phasefold</h1>
-      <p class="subtitle">Generative harmonic synth</p>
+      <h1>{{ t('synth.title') }}</h1>
+      <p class="subtitle">{{ t('synth.subtitle') }}</p>
     </header>
 
     <div class="controls">
       <!-- Preset selector-->
       <div class="section">
-        <div class="section-title">Preset</div>
+        <div class="section-title">{{ t('synth.sections.preset') }}</div>
         <select v-model="currentPreset" @change="loadPreset" class="preset-select">
           <option v-for="name in presetNames" :key="name" :value="name">
             {{ name }}
@@ -18,25 +18,27 @@
 
       <!-- Core -->
       <div class="section">
-        <div class="section-title">Core</div>
-        <ParameterSlider label="Duration" v-model="p.dur" :min="60" :max="600" :step="1" suffix=" s" @info="showInfo" />
-        <ParameterSlider label="Base frequency" v-model="p.baseF0" :min="20" :max="220" :step="0.1"
+        <div class="section-title">{{ t('synth.sections.core') }}</div>
+        <ParameterSlider :label="t('synth.params.duration')" v-model="p.dur" :min="60" :max="600" :step="1" suffix=" s"
+          @info="showInfo" />
+        <ParameterSlider :label="t('synth.params.baseFrequency')" v-model="p.baseF0" :min="20" :max="220" :step="0.1"
           :suffix="` Hz (${noteName})`" @info="showInfo" />
-        <ParameterSlider label="Voices per layer" v-model="p.voices" :min="1" :max="9" :step="1" @info="showInfo" />
-        <ParameterSlider label="Layers" v-model="p.layers" :min="1" :max="5" :step="1" @info="showInfo" />
+        <ParameterSlider :label="t('synth.params.voicesPerLayer')" v-model="p.voices" :min="1" :max="9" :step="1"
+          @info="showInfo" />
+        <ParameterSlider :label="t('synth.params.layers')" v-model="p.layers" :min="1" :max="5" :step="1"
+          @info="showInfo" />
       </div>
 
       <!-- Temporal -->
       <details class="section" open>
-        <summary class="section-title clickable">Temporal</summary>
+        <summary class="section-title clickable">{{ t('synth.sections.temporal') }}</summary>
         <!-- Breath state selector -->
         <div class="breath-control">
           <div class="param-header">
-            <span class="param-label">Breath rate</span>
+            <span class="param-label">{{ t('synth.params.breathRate') }}</span>
           </div>
           <p class="param-subtitle">
-            The pace at which the sound breathes — slower draws you deeper
-            inward
+            {{ t('synth.params.breathSubtitle') }}
           </p>
           <div class="breath-options">
             <button v-for="state in BREATH_STATES" :key="state.name"
@@ -49,12 +51,12 @@
 
       <!-- Spatial -->
       <details class="section" open>
-        <summary class="section-title clickable">Spatial</summary>
+        <summary class="section-title clickable">{{ t('synth.sections.spatial') }}</summary>
 
         <!-- Mind state selector -->
         <div class="mind-state-control">
           <div class="param-header">
-            <span class="param-label">Mind state</span>
+            <span class="param-label">{{ t('synth.params.mindState') }}</span>
           </div>
           <div class="mind-state-options">
             <button v-for="state in MIND_STATES" :key="state.name"
@@ -78,8 +80,8 @@
           </div>
         </div>
 
-        <ParameterSlider label="Binaural mix" v-model="p.binauralAmount" :min="0" :max="0.6" :step="0.01"
-          @info="showInfo" />
+        <ParameterSlider :label="t('synth.params.binauralMix')" v-model="p.binauralAmount" :min="0" :max="0.6"
+          :step="0.01" @info="showInfo" />
       </details>
 
       <!-- Parameter info -->
@@ -104,13 +106,13 @@
 
       <div class="buttons">
         <button @click="onGenerate" :disabled="isGenerating" class="btn btn-primary">
-          {{ isGenerating ? "Generating\u2026" : "Generate" }}
+          {{ isGenerating ? t('common.generating') : t('common.generate') }}
         </button>
         <button @click="onPlay" :disabled="!hasAudio || isGenerating" class="btn">
-          {{ isPlaying ? "Pause" : "Play" }}
+          {{ isPlaying ? t('common.pause') : t('common.play') }}
         </button>
-        <button @click="onStop" :disabled="!isPlaying" class="btn">Stop</button>
-        <button @click="onSave" :disabled="!hasAudio" class="btn">Save</button>
+        <button @click="onStop" :disabled="!isPlaying" class="btn">{{ t('common.stop') }}</button>
+        <button @click="onSave" :disabled="!hasAudio" class="btn">{{ t('common.save') }}</button>
       </div>
     </div>
   </div>
@@ -118,6 +120,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watchEffect } from "vue";
+import { useI18n } from "vue-i18n";
 import ParameterSlider from "../components/ParameterSlider.vue";
 import { useAudioEngine } from "../composables/useAudioEngine";
 import { warmup } from "../engine/audioContext";
@@ -125,6 +128,8 @@ import { PRESETS, type PresetValues } from "../data/presets";
 import { freqToNoteName } from "../engine/dsp";
 import { AUDIO_SR } from "../engine/types";
 import type { SynthParams } from "../engine/types";
+
+const { t } = useI18n();
 
 const {
   generate,
@@ -139,56 +144,21 @@ const {
   playbackTime,
 } = useAudioEngine();
 
-const MIND_STATES = [
-  {
-    name: "Delta",
-    hz: 2,
-    min: 0.5,
-    max: 4,
-    step: 0.1,
-    description: "Surrender into deep, restorative sleep",
-  },
-  {
-    name: "Theta",
-    hz: 6,
-    min: 4,
-    max: 8,
-    step: 0.1,
-    description: "The edge of dreaming — deep meditative release",
-  },
-  {
-    name: "Alpha",
-    hz: 10,
-    min: 8,
-    max: 13,
-    step: 0.1,
-    description: "Soft, restful awareness — the hypnagogic threshold",
-  },
-  {
-    name: "Beta",
-    hz: 18,
-    min: 13,
-    max: 30,
-    step: 0.5,
-    description: "Soft focus and clear, present-moment alertness",
-  },
-  {
-    name: "Gamma",
-    hz: 40,
-    min: 30,
-    max: 100,
-    step: 1,
-    description: "Heightened perception and sensitive awareness",
-  },
-];
+const MIND_STATES = computed(() => [
+  { name: t('synth.mindStates.delta.name'), hz: 2, min: 0.5, max: 4, step: 0.1, description: t('synth.mindStates.delta.description') },
+  { name: t('synth.mindStates.theta.name'), hz: 6, min: 4, max: 8, step: 0.1, description: t('synth.mindStates.theta.description') },
+  { name: t('synth.mindStates.alpha.name'), hz: 10, min: 8, max: 13, step: 0.1, description: t('synth.mindStates.alpha.description') },
+  { name: t('synth.mindStates.beta.name'), hz: 18, min: 13, max: 30, step: 0.5, description: t('synth.mindStates.beta.description') },
+  { name: t('synth.mindStates.gamma.name'), hz: 40, min: 30, max: 100, step: 1, description: t('synth.mindStates.gamma.description') },
+]);
 
-const BREATH_STATES = [
-  { name: "Formless", hz: 0.005 },
-  { name: "Restorative", hz: 0.012 },
-  { name: "Meditative", hz: 0.025 },
-  { name: "Relaxed", hz: 0.05 },
-  { name: "Awakened", hz: 0.083 },
-];
+const BREATH_STATES = computed(() => [
+  { name: t('synth.breathStates.formless'), hz: 0.005 },
+  { name: t('synth.breathStates.restorative'), hz: 0.012 },
+  { name: t('synth.breathStates.meditative'), hz: 0.025 },
+  { name: t('synth.breathStates.relaxed'), hz: 0.05 },
+  { name: t('synth.breathStates.awakened'), hz: 0.083 },
+]);
 
 // ── reactive state (initialised from first preset) ──
 const presetEntries = Object.entries(PRESETS);
@@ -196,7 +166,7 @@ const [defaultPresetName, defaultPresetValues] = presetEntries[0] as [string, Pr
 
 const p = reactive<PresetValues>({ ...defaultPresetValues });
 const currentPreset = ref(defaultPresetName);
-const status = ref("Ready");
+const status = ref(t('synth.status.ready'));
 const infoTitle = ref("");
 const infoText = ref("");
 
@@ -207,9 +177,9 @@ const duration = computed(() => getDuration());
 const noteName = computed(() => freqToNoteName(p.baseF0));
 const activeMindState = computed(
   () =>
-    MIND_STATES.find(
+    MIND_STATES.value.find(
       (s) => p.binauralDeltaHz0 >= s.min && p.binauralDeltaHz0 <= s.max,
-    ) ?? MIND_STATES[2],
+    ) ?? MIND_STATES.value[2],
 );
 
 // ── actions ────────────────────────────────────
@@ -246,21 +216,21 @@ async function onGenerate() {
   stopAudio();
   playbackTime.value = 0;
 
-  status.value = "Generating\u2026";
+  status.value = t('common.generating');
 
   // Reactive progress updates while worker runs
   const stopWatch = watchEffect(() => {
     if (isGenerating.value && generationProgress.value > 0) {
-      status.value = `Generating\u2026 ${generationProgress.value}%`;
+      status.value = t('synth.status.generatingProgress', { progress: generationProgress.value });
     }
   });
 
   try {
     const audio = await generate(buildParams());
     const dur = audio.left.length / audio.sampleRate;
-    status.value = `Generated ${dur.toFixed(1)} s at ${audio.sampleRate} Hz`;
+    status.value = t('synth.status.generated', { dur: dur.toFixed(1), rate: audio.sampleRate });
   } catch (e: any) {
-    status.value = `Error: ${e.message}`;
+    status.value = t('synth.status.error', { message: e.message });
   } finally {
     stopWatch();
   }
@@ -269,22 +239,22 @@ async function onGenerate() {
 function onPlay() {
   if (isPlaying.value) {
     stopAudio();
-    status.value = "Paused";
+    status.value = t('synth.status.paused');
   } else {
     playAudio(playbackTime.value);
-    status.value = "Playing\u2026";
+    status.value = t('synth.status.playing');
   }
 }
 
 function onStop() {
   stopAudio();
   playbackTime.value = 0;
-  status.value = "Stopped";
+  status.value = t('synth.status.stopped');
 }
 
 function onSave() {
   exportWav();
-  status.value = "WAV exported";
+  status.value = t('synth.status.exported');
 }
 
 function onScrub(e: Event) {
@@ -298,23 +268,19 @@ function onScrub(e: Event) {
 }
 
 // ── parameter descriptions ─────────────────────
-const PARAM_INFO: Record<string, string> = {
-  Duration:
-    "How long the piece evolves for over time.",
-  "Base frequency":
-    "The pitch everything is built around. 60\u2013120 Hz feels grounded; 150\u2013300 Hz feels bright.",
-  "Voices per layer": "More voices = richer, thicker sound with more motion.",
-  Layers:
-    "Depth of recursion. 1-4 = clear/structural, 4+ = complex folding sound fields.",
-  "Breath rate":
-    "Sets the pace of the spatial breathing cycle. Also gently modulates the binaural beat frequency for a slowly drifting entrainment effect.",
-  "Binaural mix": "How much binaural bed is mixed under the main signal.",
-
+const PARAM_INFO_KEYS: Record<string, string> = {
+  [t('synth.params.duration')]: 'synth.paramInfo.duration',
+  [t('synth.params.baseFrequency')]: 'synth.paramInfo.baseFrequency',
+  [t('synth.params.voicesPerLayer')]: 'synth.paramInfo.voicesPerLayer',
+  [t('synth.params.layers')]: 'synth.paramInfo.layers',
+  [t('synth.params.breathRate')]: 'synth.paramInfo.breathRate',
+  [t('synth.params.binauralMix')]: 'synth.paramInfo.binauralMix',
 };
 
 function showInfo(label: string) {
   infoTitle.value = label;
-  infoText.value = PARAM_INFO[label] || "No description available.";
+  const key = PARAM_INFO_KEYS[label];
+  infoText.value = key ? t(key) : t('synth.paramInfo.noDescription');
 }
 
 // ── formatting ─────────────────────────────────

@@ -3,19 +3,16 @@
     <Transition name="fade" mode="out-in">
       <div v-if="step === 0" key="welcome" class="screen welcome-screen">
         <div class="welcome-content">
-          <h1 class="welcome-title">Welcome to<br /><strong>Soneuro</strong></h1>
+          <h1 class="welcome-title">{{ t('onboarding.welcomeTo') }}<br /><strong>{{ t('onboarding.appName') }}</strong></h1>
         </div>
       </div>
 
       <div v-else-if="step === 1" key="intent" class="screen intent-screen">
-        <h2 class="intent-title">
-          What can <strong>Soneuro</strong>
-          <br> help you with <br> today?
-        </h2>
+        <h2 class="intent-title" v-html="t('onboarding.intentQuestion', { appName: `<strong>${t('onboarding.appName')}</strong>` })" />
 
         <div class="intent-options">
           <button v-for="option in INTENTS" :key="option.slug" class="intent-btn" @click="selectIntent(option.slug)">
-            {{ option.label }}
+            {{ t(`onboarding.intents.${option.slug}`) }}
           </button>
         </div>
       </div>
@@ -26,7 +23,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
@@ -35,9 +34,9 @@ const initialStep = route.query.step === '1' ? 1 : 0
 const step = ref(initialStep)
 
 const INTENTS = [
-  { label: 'Increase focus', slug: 'focus' },
-  { label: 'Sleep better', slug: 'sleep' },
-  { label: 'Reduce anxiety', slug: 'anxiety' },
+  { slug: 'focus' },
+  { slug: 'sleep' },
+  { slug: 'anxiety' },
 ]
 
 onMounted(() => {

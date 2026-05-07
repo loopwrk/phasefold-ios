@@ -1,6 +1,6 @@
 <template>
   <div class="playback">
-    <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">Soneuro</router-link>
+    <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName') }}</router-link>
 
     <div class="playback-content">
       <!-- Progress ring / playing state -->
@@ -19,7 +19,7 @@
       </div>
 
       <p class="playback-label">
-        {{ isGenerating ? `Generating… ${generationProgress}%` : 'Playing' }}
+        {{ isGenerating ? t('playback.generatingProgress', { progress: generationProgress }) : t('playback.playing') }}
       </p>
       <p class="playback-preset-name">{{ displayName }}</p>
     </div>
@@ -27,10 +27,10 @@
     <div class="playback-bar">
       <div class="playback-buttons">
         <AppButton variant="action" :disabled="isGenerating" @click="onPlayPause">
-          {{ isPlaying ? 'Pause' : 'Play' }}
+          {{ isPlaying ? t('common.pause') : t('common.play') }}
         </AppButton>
         <AppButton variant="surface" :disabled="isGenerating || !isPlaying" @click="onStop">
-          Stop
+          {{ t('common.stop') }}
         </AppButton>
       </div>
 
@@ -42,10 +42,10 @@
                 stroke-linejoin="round" />
             </svg>
           </template>
-          Presets
+          {{ t('playback.presets') }}
         </AppButton>
         <AppButton variant="surface" compact @click="goToCustom">
-          Custom
+          {{ t('playback.custom') }}
           <template #icon-right>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M1 7h12m0 0L8 2m5 5L8 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -61,12 +61,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AppButton from '../components/Buttons/AppButton.vue'
 import { useAudioEngine } from '../composables/useAudioEngine'
 import { PRESETS } from '../data/presets'
 import { AUDIO_SR } from '../engine/types'
 import type { SynthParams } from '../engine/types'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
