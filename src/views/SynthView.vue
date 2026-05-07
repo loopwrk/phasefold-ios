@@ -112,7 +112,7 @@
           {{ isPlaying ? t('common.pause') : t('common.play') }}
         </button>
         <button @click="onStop" :disabled="!isPlaying" class="btn">{{ t('common.stop') }}</button>
-        <button @click="onSave" :disabled="!hasAudio" class="btn">{{ t('common.save') }}</button>
+        <button @click="onSave" :disabled="!hasAudio" class="btn save">{{ t('common.save') }}</button>
       </div>
     </div>
   </div>
@@ -614,6 +614,10 @@ details[open]>.section-title.clickable::before {
   color: #1d1d1f;
   transition: opacity 0.15s;
   -webkit-tap-highlight-color: transparent;
+}
+
+.btn.save {
+  display: none;
 }
 
 .btn:disabled {
