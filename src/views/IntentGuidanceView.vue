@@ -308,8 +308,8 @@ function advance() {
   flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   min-height: 0;
-  padding-top: 48px;
 }
 
 .preset-heading {
@@ -323,7 +323,6 @@ function advance() {
 }
 
 .preset-list {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 12px;
