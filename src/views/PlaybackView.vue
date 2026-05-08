@@ -1,7 +1,7 @@
 <template>
   <div class="playback">
     <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName')
-      }}</router-link>
+    }}</router-link>
 
     <div class="playback-content">
       <!-- Progress ring / playing state -->
@@ -211,7 +211,7 @@ onUnmounted(() => {
 
 .playback-preset-name {
   font-size: 14px;
-  color: var(--cs-raised);
+  color: var(--cs-text);
   text-align: center;
 }
 
