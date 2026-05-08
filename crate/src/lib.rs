@@ -85,6 +85,89 @@ impl SeededRNG {
 }
 
 // ────────────────────────────────────────────────
+// Simplex state-vector helpers
+// ────────────────────────────────────────────────
+
+const EPS: f64 = 1e-12;
+
+/// Sigmoid-normalise a 2-element vector onto the probability simplex.
+/// Returns [s0/sum, s1/sum] where s_i = sigmoid(clamp(v_i, -8, 8)).
+fn stabilize_state_inner(v0: f64, v1: f64) -> (f64, f64) {
+    let c0 = v0.max(-8.0).min(8.0);
+    let c1 = v1.max(-8.0).min(8.0);
+    let s0 = 1.0 / (1.0 + (-c0).exp());
+    let s1 = 1.0 / (1.0 + (-c1).exp());
+    let s = s0 + s1 + EPS;
+    (s0 / s, s1 / s)
+}
+
+/// Retrocausal projection toward the "unified" state.
+fn proj_p(v0: f64, v1: f64) -> (f64, f64) {
+    let (st0, st1) = stabilize_state_inner(v0, v1);
+    let s = st0 + st1;
+    (s, 0.0)
+}
+
+/// Bistochastic mixing matrix — returns (a, b, c, d) for [[a,b],[c,d]].
+fn mix_r(theta: f64) -> (f64, f64, f64, f64) {
+    let c = 0.5 * (1.0 + theta.cos());
+    let s = 0.5 * (1.0 + theta.sin());
+    (c, s, 1.0 - c, 1.0 - s)
+}
+
+/// Asymmetry tilt matrix.
+fn tilt_a(eps: f64) -> (f64, f64, f64, f64) {
+    let e = eps.max(0.0).min(0.25);
+    (1.0, e, 0.0, 1.0 - e)
+}
+
+/// Exposed to JS: stabilizeState([v0, v1]) → [s0, s1]
+/// Returns a 2-element Vec<f64> (wasm-bindgen maps to Float64Array).
+#[wasm_bindgen]
+pub fn stabilize_state(v0: f64, v1: f64) -> Vec<f64> {
+    let (s0, s1) = stabilize_state_inner(v0, v1);
+    vec![s0, s1]
+}
+
+/// Exposed to JS: applyPhi(v0, v1, lam, thetaStep, eps) → [r0, r1]
+///
+/// Core recursive transformation Phi. Combines projection (lambda),
+/// tilt (eps), and rotation (thetaStep).
+#[wasm_bindgen]
+pub fn apply_phi(
+    v0: f64,
+    v1: f64,
+    lam: f64,
+    theta_step: f64,
+    eps_param: f64,
+) -> Vec<f64> {
+    let lam = lam.max(0.0).min(1.0);
+    let theta = theta_step.max(-0.05).min(0.05);
+    let (vs0, vs1) = stabilize_state_inner(v0, v1);
+    let (p0, p1) = proj_p(vs0, vs1);
+
+    // Step 1 — blend toward projection
+    let v1_0 = (1.0 - lam) * vs0 + lam * p0;
+    let v1_1 = (1.0 - lam) * vs1 + lam * p1;
+
+    // Step 2 — tilt
+    let (t0, t1, t2, t3) = tilt_a(eps_param);
+    let v2_0 = t0 * v1_0 + t1 * v1_1;
+    let v2_1 = t2 * v1_0 + t3 * v1_1;
+
+    // Step 3 — rotation
+    let (m0, m1, m2, m3) = mix_r(theta);
+    let mut v3_0 = m0 * v2_0 + m1 * v2_1;
+    let mut v3_1 = m2 * v2_0 + m3 * v2_1;
+
+    // Renormalise
+    v3_0 = v3_0.max(EPS).min(1.0);
+    v3_1 = v3_1.max(EPS).min(1.0);
+    let sum = v3_0 + v3_1;
+    vec![v3_0 / sum, v3_1 / sum]
+}
+
+// ────────────────────────────────────────────────
 // One-pole low-pass filter (smooth_envelope)
 // ────────────────────────────────────────────────
 
@@ -220,6 +303,36 @@ mod tests {
         let result = smooth_envelope(&input, 10.0, 44100.0, 0.5);
         // First sample should start from state=0.5 toward 1.0
         assert!(result[0] > 0.5);
+    }
+
+    // ── stabilize_state / apply_phi ────────────────
+
+    #[test]
+    fn stabilize_state_sums_to_one() {
+        let result = stabilize_state(0.0, 1.0);
+        let sum = result[0] + result[1];
+        assert!((sum - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn stabilize_state_symmetric_input() {
+        let result = stabilize_state(0.0, 0.0);
+        // Equal inputs → equal outputs
+        assert!((result[0] - result[1]).abs() < 1e-10);
+    }
+
+    #[test]
+    fn apply_phi_output_sums_to_one() {
+        let result = apply_phi(0.5, 0.5, 0.5, 0.01, 0.1);
+        let sum = result[0] + result[1];
+        assert!((sum - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn apply_phi_convergence() {
+        // With high lambda, output should converge toward [1, 0]
+        let result = apply_phi(0.3, 0.7, 0.99, 0.0, 0.0);
+        assert!(result[0] > 0.9);
     }
 
     // ── SeededRNG ─────────────────────────────────

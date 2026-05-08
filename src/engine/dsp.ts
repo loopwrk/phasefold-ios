@@ -186,8 +186,11 @@ export function setSmoothEnvelopeImpl(impl: SmoothEnvelopeFn): void {
 
 const EPS = 1e-12;
 
+export type StabilizeStateFn = (v: [number, number]) => [number, number];
+export type ApplyPhiFn = (v: [number, number], lam: number, thetaStep: number, eps: number) => [number, number];
+
 /** Sigmoid-normalise a 2-element vector onto the probability simplex. */
-export function stabilizeState(v: [number, number]): [number, number] {
+function stabilizeStateTS(v: [number, number]): [number, number] {
   const c0 = Math.max(-8, Math.min(8, v[0]));
   const c1 = Math.max(-8, Math.min(8, v[1]));
   const s0 = 1.0 / (1.0 + Math.exp(-c0));
@@ -198,7 +201,7 @@ export function stabilizeState(v: [number, number]): [number, number] {
 
 /** Retrocausal projection toward the "unified" state. */
 function projP(v: [number, number]): [number, number] {
-  const st = stabilizeState(v);
+  const st = stabilizeStateTS(v);
   const s = st[0] + st[1];
   return [s, 0];
 }
@@ -220,7 +223,7 @@ function tiltA(eps: number): [number, number, number, number] {
  * Core recursive transformation Phi.
  * Combines projection (lambda), tilt (eps), and rotation (thetaStep).
  */
-export function applyPhi(
+function applyPhiTS(
   v: [number, number],
   lam: number,
   thetaStep: number,
@@ -228,7 +231,7 @@ export function applyPhi(
 ): [number, number] {
   lam = Math.max(0, Math.min(1, lam));
   const theta = Math.max(-0.05, Math.min(0.05, thetaStep));
-  const vs = stabilizeState(v);
+  const vs = stabilizeStateTS(v);
   const p = projP(vs);
 
   // Step 1 — blend toward projection
@@ -250,6 +253,30 @@ export function applyPhi(
   v3_1 = Math.max(EPS, Math.min(1, v3_1));
   const sum = v3_0 + v3_1;
   return [v3_0 / sum, v3_1 / sum];
+}
+
+let stabilizeStateImpl: StabilizeStateFn = stabilizeStateTS;
+let applyPhiImpl: ApplyPhiFn = applyPhiTS;
+
+export function stabilizeState(v: [number, number]): [number, number] {
+  return stabilizeStateImpl(v);
+}
+
+export function applyPhi(
+  v: [number, number],
+  lam: number,
+  thetaStep: number,
+  eps: number,
+): [number, number] {
+  return applyPhiImpl(v, lam, thetaStep, eps);
+}
+
+export function setStabilizeStateImpl(impl: StabilizeStateFn): void {
+  stabilizeStateImpl = impl;
+}
+
+export function setApplyPhiImpl(impl: ApplyPhiFn): void {
+  applyPhiImpl = impl;
 }
 
 // ────────────────────────────────────────────────

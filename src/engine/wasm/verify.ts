@@ -12,6 +12,8 @@ import {
   smoothEnvelope as tsSmoothEnvelope,
   linspace as tsLinspace,
   interp as tsInterp,
+  stabilizeState as tsStabilizeState,
+  applyPhi as tsApplyPhi,
   SeededRNG as TSSeededRNG,
 } from '../dsp'
 import {
@@ -19,6 +21,8 @@ import {
   smoothEnvelope as wasmSmoothEnvelope,
   linspace as wasmLinspace,
   interp as wasmInterp,
+  stabilizeState as wasmStabilizeState,
+  applyPhi as wasmApplyPhi,
   SeededRNG as WasmSeededRNG,
 } from './dsp'
 
@@ -198,6 +202,78 @@ export async function verify(): Promise<void> {
     tsInterp(audioProgress, ctrlProgress, ctrlData),
     wasmInterp(audioProgress, ctrlProgress, ctrlData),
   )
+
+  // ── stabilizeState / applyPhi tests ────────────
+
+  console.log('\n── stabilizeState / applyPhi ──')
+
+  function compareTuples(
+    name: string,
+    ts: [number, number],
+    wasm: [number, number],
+    tolerance = 1e-12,
+  ) {
+    const err0 = Math.abs(ts[0] - wasm[0])
+    const err1 = Math.abs(ts[1] - wasm[1])
+    const maxErr = Math.max(err0, err1)
+    const passed = maxErr <= tolerance
+    console.log(
+      `[${passed ? 'PASS' : 'FAIL'}] ${name}` +
+        ` — max error: ${maxErr.toExponential(3)}` +
+        ` (TS: [${ts[0].toFixed(8)}, ${ts[1].toFixed(8)}]` +
+        `, Wasm: [${wasm[0].toFixed(8)}, ${wasm[1].toFixed(8)}])`,
+    )
+    if (!passed) allPassed = false
+  }
+
+  // stabilizeState
+  compareTuples(
+    'stabilizeState([0, 1])',
+    tsStabilizeState([0, 1]),
+    wasmStabilizeState([0, 1]),
+  )
+  compareTuples(
+    'stabilizeState([0, 0]) — symmetric',
+    tsStabilizeState([0, 0]),
+    wasmStabilizeState([0, 0]),
+  )
+  compareTuples(
+    'stabilizeState([-5, 3]) — asymmetric',
+    tsStabilizeState([-5, 3]),
+    wasmStabilizeState([-5, 3]),
+  )
+
+  // applyPhi — single step
+  compareTuples(
+    'applyPhi([0.5, 0.5], 0.5, 0.01, 0.1)',
+    tsApplyPhi([0.5, 0.5], 0.5, 0.01, 0.1),
+    wasmApplyPhi([0.5, 0.5], 0.5, 0.01, 0.1),
+  )
+
+  // applyPhi — high convergence
+  compareTuples(
+    'applyPhi([0.3, 0.7], 0.99, 0.0, 0.0) — high lambda',
+    tsApplyPhi([0.3, 0.7], 0.99, 0.0, 0.0),
+    wasmApplyPhi([0.3, 0.7], 0.99, 0.0, 0.0),
+  )
+
+  // applyPhi — iterated (mimics the generator's control-rate loop)
+  {
+    let tsState: [number, number] = tsStabilizeState([0, 1])
+    let wasmState: [number, number] = wasmStabilizeState([0, 1])
+    const Nc = 600
+    for (let i = 1; i < Nc; i++) {
+      const lam = i / Nc
+      const thetaStep = (2 * Math.PI * (0.05 + 0.1 * lam)) / 60
+      tsState = tsApplyPhi(tsState, lam, thetaStep, 0.1)
+      wasmState = wasmApplyPhi(wasmState, lam, thetaStep, 0.1)
+    }
+    compareTuples(
+      `applyPhi iterated ${Nc} steps (full control-rate sim)`,
+      tsState,
+      wasmState,
+    )
+  }
 
   // ── SeededRNG tests ────────────────────────────
 

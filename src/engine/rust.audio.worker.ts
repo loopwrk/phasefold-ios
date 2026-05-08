@@ -7,12 +7,21 @@
  */
 
 import { generateAudio } from './generator'
-import { setSmoothEnvelopeImpl, setLinspaceImpl, setInterpImpl, setSeededRNGFactory } from './dsp'
+import {
+  setSmoothEnvelopeImpl,
+  setLinspaceImpl,
+  setInterpImpl,
+  setSeededRNGFactory,
+  setStabilizeStateImpl,
+  setApplyPhiImpl,
+} from './dsp'
 import {
   initWasm,
   smoothEnvelope as wasmSmoothEnvelope,
   linspace as wasmLinspace,
   interp as wasmInterp,
+  stabilizeState as wasmStabilizeState,
+  applyPhi as wasmApplyPhi,
   SeededRNG as WasmSeededRNG,
 } from './wasm/dsp'
 import type { WorkerRequest, WorkerResponse } from './types'
@@ -35,6 +44,8 @@ worker.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       setLinspaceImpl(wasmLinspace)
       setInterpImpl(wasmInterp)
       setSeededRNGFactory((seed) => new WasmSeededRNG(seed))
+      setStabilizeStateImpl(wasmStabilizeState)
+      setApplyPhiImpl(wasmApplyPhi)
       wasmReady = true
       console.log('[phasefold rust-worker] Wasm initialised, all DSP functions swapped')
     }

@@ -21,6 +21,8 @@ import wasmInit, {
   smooth_envelope as wasmSmoothEnvelope,
   linspace as wasmLinspace,
   interp as wasmInterp,
+  stabilize_state as wasmStabilizeState,
+  apply_phi as wasmApplyPhi,
   SeededRNG as WasmSeededRNG,
 } from '../../../crate/pkg/phasefold_dsp.js'
 
@@ -84,6 +86,29 @@ export function interp(
 ): Float32Array {
   const result = wasmInterp(x, xp, fp)
   return result instanceof Float32Array ? result : new Float32Array(result)
+}
+
+/**
+ * Sigmoid-normalise a 2-element vector onto the probability simplex.
+ * Signature matches the TypeScript original in dsp.ts.
+ */
+export function stabilizeState(v: [number, number]): [number, number] {
+  const result = wasmStabilizeState(v[0], v[1])
+  return [result[0], result[1]]
+}
+
+/**
+ * Core recursive transformation Phi.
+ * Signature matches the TypeScript original in dsp.ts.
+ */
+export function applyPhi(
+  v: [number, number],
+  lam: number,
+  thetaStep: number,
+  eps: number,
+): [number, number] {
+  const result = wasmApplyPhi(v[0], v[1], lam, thetaStep, eps)
+  return [result[0], result[1]]
 }
 
 /**
