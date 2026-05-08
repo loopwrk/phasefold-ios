@@ -52,6 +52,54 @@ pub fn smooth_envelope(
 }
 
 // ────────────────────────────────────────────────
+// Array helpers (linspace, interp)
+// ────────────────────────────────────────────────
+
+/// Generate `n` evenly spaced values from `start` to `end` (inclusive).
+/// Mirrors the TypeScript `linspace` in dsp.ts.
+#[wasm_bindgen]
+pub fn linspace(start: f32, end: f32, n: usize) -> Vec<f32> {
+    let mut a = vec![0.0_f32; n];
+    if n <= 1 {
+        if n == 1 {
+            a[0] = start;
+        }
+        return a;
+    }
+    let step = (end - start) / (n as f32 - 1.0);
+    for i in 0..n {
+        a[i] = start + i as f32 * step;
+    }
+    a
+}
+
+/// 1-D linear interpolation — equivalent to np.interp(x, xp, fp).
+/// Assumes `xp` is monotonically increasing.
+/// Mirrors the TypeScript `interp` in dsp.ts.
+#[wasm_bindgen]
+pub fn interp(x: &[f32], xp: &[f32], fp: &[f32]) -> Vec<f32> {
+    let nx = x.len();
+    let nxp = xp.len();
+    let mut out = vec![0.0_f32; nx];
+    let mut j: usize = 0;
+
+    for i in 0..nx {
+        // Advance j so xp[j] <= x[i] < xp[j+1]
+        while j < nxp.saturating_sub(2) && xp[j + 1] < x[i] {
+            j += 1;
+        }
+        let dx = {
+            let d = xp[j + 1] - xp[j];
+            if d.abs() < 1e-12 { 1e-12 } else { d }
+        };
+        let t = (x[i] - xp[j]) / dx;
+        out[i] = fp[j] + t * (fp[j + 1] - fp[j]);
+    }
+
+    out
+}
+
+// ────────────────────────────────────────────────
 // Tests (run with `cargo test`)
 // ────────────────────────────────────────────────
 
@@ -97,5 +145,53 @@ mod tests {
         let result = smooth_envelope(&input, 10.0, 44100.0, 0.5);
         // First sample should start from state=0.5 toward 1.0
         assert!(result[0] > 0.5);
+    }
+
+    // ── linspace ──────────────────────────────────
+
+    #[test]
+    fn linspace_basic() {
+        let result = linspace(0.0, 1.0, 5);
+        assert_eq!(result.len(), 5);
+        assert!((result[0] - 0.0).abs() < 1e-7);
+        assert!((result[4] - 1.0).abs() < 1e-7);
+        assert!((result[2] - 0.5).abs() < 1e-7);
+    }
+
+    #[test]
+    fn linspace_single() {
+        let result = linspace(3.0, 10.0, 1);
+        assert_eq!(result.len(), 1);
+        assert!((result[0] - 3.0).abs() < 1e-7);
+    }
+
+    #[test]
+    fn linspace_empty() {
+        let result = linspace(0.0, 1.0, 0);
+        assert!(result.is_empty());
+    }
+
+    // ── interp ────────────────────────────────────
+
+    #[test]
+    fn interp_basic() {
+        let xp = vec![0.0, 1.0];
+        let fp = vec![0.0, 10.0];
+        let x = vec![0.0, 0.5, 1.0];
+        let result = interp(&x, &xp, &fp);
+        assert!((result[0] - 0.0).abs() < 1e-6);
+        assert!((result[1] - 5.0).abs() < 1e-6);
+        assert!((result[2] - 10.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn interp_multi_segment() {
+        let xp = vec![0.0, 0.5, 1.0];
+        let fp = vec![0.0, 10.0, 0.0];
+        let x = vec![0.25, 0.5, 0.75];
+        let result = interp(&x, &xp, &fp);
+        assert!((result[0] - 5.0).abs() < 1e-5);
+        assert!((result[1] - 10.0).abs() < 1e-5);
+        assert!((result[2] - 5.0).abs() < 1e-5);
     }
 }
