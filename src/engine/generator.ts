@@ -18,7 +18,7 @@ export type ProgressCallback = (percent: number, section: string) => void;
 import type { SynthParams, StereoAudio } from "./types";
 import { CONTROL_HZ } from "./types";
 import {
-  SeededRNG,
+  createSeededRNG,
   linspace,
   interp,
   smoothEnvelope,
@@ -135,7 +135,7 @@ export function generateAudio(
   onProgress?.(5, "Envelopes");
 
   // ── 6. Seeded detune / phase ──────────────────
-  const rng = new SeededRNG(seed);
+  const rng = createSeededRNG(seed);
   const cents = rng.normalArray(0, 12, voices); // ±12 cents typical
   const phase0 = rng.uniformArray(0, TWO_PI, voices);
 

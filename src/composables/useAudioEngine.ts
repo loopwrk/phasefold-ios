@@ -37,7 +37,12 @@ import type {
 import { getAudioContext } from "../engine/audioContext";
 import { encodeWav } from "../engine/wav";
 
-export function useAudioEngine() {
+export interface AudioEngineOptions {
+  /** Override the worker URL (e.g. to use the Rust/Wasm worker). */
+  workerUrl?: URL
+}
+
+export function useAudioEngine(options: AudioEngineOptions = {}) {
   let source: AudioBufferSourceNode | null = null;
   let cachedBuffer: AudioBuffer | null = null;
   let audioDuration = 0;
@@ -100,10 +105,9 @@ export function useAudioEngine() {
     generationProgress.value = 0;
 
     return new Promise<StereoAudio>((resolve, reject) => {
-      const worker = new Worker(
-        new URL("../engine/audio.worker.ts", import.meta.url),
-        { type: "module" },
-      );
+      const workerSrc = options.workerUrl
+        ?? new URL("../engine/audio.worker.ts", import.meta.url);
+      const worker = new Worker(workerSrc, { type: "module" });
 
       activeWorker = worker;
       activeReject = reject;

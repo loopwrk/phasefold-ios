@@ -8,7 +8,16 @@
 // Seeded PRNG  (Mulberry32 + Box-Muller)
 // ────────────────────────────────────────────────
 
-export class SeededRNG {
+export interface ISeededRNG {
+  next(): number;
+  normal(mu: number, sigma: number): number;
+  normalArray(mu: number, sigma: number, n: number): Float32Array;
+  uniformArray(lo: number, hi: number, n: number): Float32Array;
+}
+
+export type SeededRNGFactory = (seed: number) => ISeededRNG;
+
+class SeededRNGTS implements ISeededRNG {
   private s: number;
 
   constructor(seed: number) {
@@ -45,11 +54,29 @@ export class SeededRNG {
   }
 }
 
+let seededRNGFactory: SeededRNGFactory = (seed) => new SeededRNGTS(seed);
+
+/** Create a SeededRNG instance (delegates to active implementation). */
+export function createSeededRNG(seed: number): ISeededRNG {
+  return seededRNGFactory(seed);
+}
+
+/** Replace the SeededRNG factory (e.g. with the Wasm version). */
+export function setSeededRNGFactory(factory: SeededRNGFactory): void {
+  seededRNGFactory = factory;
+}
+
+// Legacy export — keeps `new SeededRNG(seed)` working in existing code
+export const SeededRNG = SeededRNGTS;
+
 // ────────────────────────────────────────────────
 // Array helpers  (minimal NumPy equivalents)
 // ────────────────────────────────────────────────
 
-export function linspace(start: number, end: number, n: number): Float32Array {
+export type LinspaceFn = (start: number, end: number, n: number) => Float32Array;
+export type InterpFn = (x: Float32Array, xp: Float32Array, fp: Float32Array) => Float32Array;
+
+function linspaceTS(start: number, end: number, n: number): Float32Array {
   const a = new Float32Array(n);
   if (n <= 1) {
     a[0] = start;
@@ -64,7 +91,7 @@ export function linspace(start: number, end: number, n: number): Float32Array {
  * 1-D linear interpolation — equivalent to np.interp(x, xp, fp).
  * Assumes xp is monotonically increasing.
  */
-export function interp(
+function interpTS(
   x: Float32Array,
   xp: Float32Array,
   fp: Float32Array,
@@ -81,6 +108,25 @@ export function interp(
   return out;
 }
 
+let linspaceImpl: LinspaceFn = linspaceTS;
+let interpImpl: InterpFn = interpTS;
+
+export function linspace(start: number, end: number, n: number): Float32Array {
+  return linspaceImpl(start, end, n);
+}
+
+export function interp(x: Float32Array, xp: Float32Array, fp: Float32Array): Float32Array {
+  return interpImpl(x, xp, fp);
+}
+
+export function setLinspaceImpl(impl: LinspaceFn): void {
+  linspaceImpl = impl;
+}
+
+export function setInterpImpl(impl: InterpFn): void {
+  interpImpl = impl;
+}
+
 // ────────────────────────────────────────────────
 // One-pole low-pass  (smooth_envelope)
 // ────────────────────────────────────────────────
@@ -89,7 +135,15 @@ export function interp(
  * y[n] = y[n-1] + alpha * (x[n] - y[n-1])
  * where alpha = 1 - exp(-2 pi fc / sr)
  */
-export function smoothEnvelope(
+
+export type SmoothEnvelopeFn = (
+  input: Float32Array,
+  cutoffHz: number,
+  sampleRate: number,
+  state?: number,
+) => Float32Array;
+
+function smoothEnvelopeTS(
   input: Float32Array,
   cutoffHz: number,
   sampleRate: number,
@@ -107,6 +161,23 @@ export function smoothEnvelope(
     out[i] = acc;
   }
   return out;
+}
+
+/** Active implementation — defaults to TS, swappable to Wasm via setSmoothEnvelopeImpl. */
+let smoothEnvelopeImpl: SmoothEnvelopeFn = smoothEnvelopeTS;
+
+export function smoothEnvelope(
+  input: Float32Array,
+  cutoffHz: number,
+  sampleRate: number,
+  state = 0,
+): Float32Array {
+  return smoothEnvelopeImpl(input, cutoffHz, sampleRate, state);
+}
+
+/** Replace the smoothEnvelope implementation (e.g. with the Wasm version). */
+export function setSmoothEnvelopeImpl(impl: SmoothEnvelopeFn): void {
+  smoothEnvelopeImpl = impl;
 }
 
 // ────────────────────────────────────────────────

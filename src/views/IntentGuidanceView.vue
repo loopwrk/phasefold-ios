@@ -2,7 +2,7 @@
   <div class="guidance">
     <div class="top-bar">
       <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName')
-        }}</router-link>
+      }}</router-link>
       <AppButton variant="surface" icon @click="goToHowItWorks">
         <AppIcon name="question" :size="24" />
       </AppButton>
@@ -176,9 +176,9 @@ const intentPresets = computed(() => {
 
 function selectPreset(presetKey: string) {
   // Unlock the AudioContext now, while still in the tap's call stack.
-  // PlaybackView will reuse this same context after navigation.
+  // RustPlaybackView will reuse this same context after navigation.
   warmup()
-  router.push({ name: 'playback', params: { preset: presetKey } })
+  router.push({ name: 'rust-playback', params: { preset: presetKey } })
 }
 
 function goBack() {
@@ -239,20 +239,6 @@ function advance() {
   justify-content: center;
   align-items: center;
   gap: 12px;
-}
-
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--cs-text);
-  text-align: center;
-  letter-spacing: -0.3px;
-}
-
-.page-subtitle {
-  font-size: 16px;
-  color: var(--cs-raised);
-  text-align: center;
 }
 
 .nav-bar {

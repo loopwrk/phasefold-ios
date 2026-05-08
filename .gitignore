@@ -5,3 +5,7 @@ dist/
 Phasefold Research/
 CLAUDE.md
 *.bak*
+
+# Rust/Wasm build artefacts
+crate/pkg/
+crate/target/

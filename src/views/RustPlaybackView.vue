@@ -79,6 +79,8 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
+const rustWorkerUrl = new URL('../engine/rust.audio.worker.ts', import.meta.url)
+
 const {
   generate,
   cancelGeneration,
@@ -89,7 +91,7 @@ const {
   generationProgress,
   currentAudio,
   playbackTime,
-} = useAudioEngine()
+} = useAudioEngine({ workerUrl: rustWorkerUrl })
 
 // Preset key passed via route param
 const presetKey = computed(() => decodeURIComponent(route.params.preset as string))

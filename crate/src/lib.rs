@@ -6,8 +6,83 @@
 
 use wasm_bindgen::prelude::*;
 use std::f32::consts::PI;
+use std::f64::consts::PI as PI_F64;
 
 const TWO_PI: f32 = 2.0 * PI;
+const TWO_PI_F64: f64 = 2.0 * PI_F64;
+
+// ────────────────────────────────────────────────
+// Seeded PRNG (Mulberry32 + Box-Muller)
+// ────────────────────────────────────────────────
+
+/// Deterministic PRNG matching the TypeScript SeededRNG class exactly.
+///
+/// Uses Mulberry32 for uniform generation and Box-Muller for gaussian.
+/// All intermediate math uses the same types as JS to ensure bit-identical
+/// output:
+///   - `next()`: u32 wrapping arithmetic → f64 division (matches JS >>> 0 / 4294967296)
+///   - `normal()`: f64 throughout (matches JS Math.sqrt/log/cos which are f64)
+///   - Array outputs truncate to f32 at the boundary (matches Float32Array storage)
+#[wasm_bindgen]
+pub struct SeededRNG {
+    s: u32,
+}
+
+#[wasm_bindgen]
+impl SeededRNG {
+    /// Create a new PRNG with the given seed.
+    /// The `| 0` in TS converts to i32; we store as u32 for wrapping ops.
+    #[wasm_bindgen(constructor)]
+    pub fn new(seed: i32) -> SeededRNG {
+        SeededRNG { s: seed as u32 }
+    }
+
+    /// Uniform in [0, 1) — Mulberry32.
+    /// Returns f64 to match JS number precision.
+    pub fn next(&mut self) -> f64 {
+        // self.s += 0x6D2B79F5  (wrapping)
+        self.s = self.s.wrapping_add(0x6D2B_79F5);
+        let mut t = self.s;
+        // t = Math.imul(t ^ (t >>> 15), t | 1)
+        t = (t ^ (t >> 15)).wrapping_mul(t | 1);
+        // t ^= t + Math.imul(t ^ (t >>> 7), 61 | t)
+        t ^= t.wrapping_add((t ^ (t >> 7)).wrapping_mul(61 | t));
+        // ((t ^ (t >>> 14)) >>> 0) / 4294967296
+        let out = t ^ (t >> 14);
+        (out as f64) / 4_294_967_296.0
+    }
+
+    /// Gaussian via Box-Muller — uses f64 throughout to match JS Math.
+    pub fn normal(&mut self, mu: f64, sigma: f64) -> f64 {
+        let u1 = {
+            let v = self.next();
+            if v == 0.0 { 1e-10 } else { v }
+        };
+        let u2 = self.next();
+        let z = (-2.0 * u1.ln()).sqrt() * (TWO_PI_F64 * u2).cos();
+        mu + sigma * z
+    }
+
+    /// Generate n gaussian samples as Float32Array.
+    /// f64 → f32 truncation happens here, matching TS Float32Array storage.
+    pub fn normal_array(&mut self, mu: f64, sigma: f64, n: usize) -> Vec<f32> {
+        let mut a = vec![0.0_f32; n];
+        for i in 0..n {
+            a[i] = self.normal(mu, sigma) as f32;
+        }
+        a
+    }
+
+    /// Generate n uniform samples in [lo, hi) as Float32Array.
+    pub fn uniform_array(&mut self, lo: f64, hi: f64, n: usize) -> Vec<f32> {
+        let mut a = vec![0.0_f32; n];
+        let range = hi - lo;
+        for i in 0..n {
+            a[i] = (lo + range * self.next()) as f32;
+        }
+        a
+    }
+}
 
 // ────────────────────────────────────────────────
 // One-pole low-pass filter (smooth_envelope)
@@ -145,6 +220,43 @@ mod tests {
         let result = smooth_envelope(&input, 10.0, 44100.0, 0.5);
         // First sample should start from state=0.5 toward 1.0
         assert!(result[0] > 0.5);
+    }
+
+    // ── SeededRNG ─────────────────────────────────
+
+    #[test]
+    fn rng_deterministic() {
+        let mut a = SeededRNG::new(2025);
+        let mut b = SeededRNG::new(2025);
+        for _ in 0..100 {
+            assert_eq!(a.next().to_bits(), b.next().to_bits());
+        }
+    }
+
+    #[test]
+    fn rng_uniform_range() {
+        let mut rng = SeededRNG::new(42);
+        for _ in 0..1000 {
+            let v = rng.next();
+            assert!(v >= 0.0 && v < 1.0);
+        }
+    }
+
+    #[test]
+    fn rng_normal_array_length() {
+        let mut rng = SeededRNG::new(2025);
+        let arr = rng.normal_array(0.0, 12.0, 5);
+        assert_eq!(arr.len(), 5);
+    }
+
+    #[test]
+    fn rng_uniform_array_range() {
+        let mut rng = SeededRNG::new(2025);
+        let arr = rng.uniform_array(0.0, 6.283185307, 10);
+        assert_eq!(arr.len(), 10);
+        for &v in &arr {
+            assert!(v >= 0.0 && v < 6.3);
+        }
     }
 
     // ── linspace ──────────────────────────────────

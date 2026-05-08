@@ -8,6 +8,10 @@ Currently optimised as a web app, wrapped in Capacitor for later deployment as a
 
 ![Vue](https://img.shields.io/badge/Vue-3.x-4FC08D?logo=vue.js) ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript) ![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite) ![Capacitor](https://img.shields.io/badge/Capacitor-iOS-119EFF?logo=capacitor) ![Web Audio API](https://img.shields.io/badge/Web_Audio_API-44.1kHz-FF6600)
 
+# Preview
+
+WIP preview hosted on Vercel: [Soneuro](https://phasefold-ios.vercel.app/)
+
 ## Getting started
 
 ### Prerequisites

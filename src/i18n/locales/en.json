@@ -75,6 +75,8 @@
   "playback": {
     "generatingProgress": "Generating… {progress}%",
     "playing": "Playing",
+    "error": "Something went wrong",
+    "retry": "Try again",
     "presets": "Presets",
     "custom": "Custom"
   },

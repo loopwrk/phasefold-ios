@@ -28,6 +28,11 @@ const router = createRouter({
       component: () => import("../views/PlaybackView.vue"),
     },
     {
+      path: "/rust/:preset",
+      name: "rust-playback",
+      component: () => import("../views/RustPlaybackView.vue"),
+    },
+    {
       path: "/synth",
       name: "synth",
       component: () => import("../views/SynthView.vue"),
