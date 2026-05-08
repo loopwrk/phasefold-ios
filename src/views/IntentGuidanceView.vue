@@ -27,7 +27,7 @@
           </div>
 
           <div class="nav-buttons">
-            <button v-if="page > 0" class="btn btn-back" @click="page--">
+            <button class="btn btn-back" @click="goBack">
               {{ t('common.back') }}
             </button>
             <button class="btn btn-next" @click="advance">
@@ -78,18 +78,9 @@ const route = useRoute()
 const router = useRouter()
 const intentSlug = computed(() => route.params.intent as string)
 
-function resolveInitialPage(): number {
-  const pageQuery = route.query.page as string | undefined
-  if (pageQuery === 'presets') {
-    const defs = PAGE_DEFS[route.params.intent as string]
-    return defs ? defs(t).length : 0
-  }
-  return Number(pageQuery) || 0
-}
-const page = ref(resolveInitialPage())
-
 // Page content definition: show icon?, body paragraphs, and optional
-// text modifier Driven entirely by the locale JSON
+// text modifier. Driven entirely by the locale JSON.
+// Declared before resolveInitialPage which depends on it.
 
 interface GuidancePara {
   text: string
@@ -153,6 +144,16 @@ const PAGE_DEFS: Record<string, (t: (key: string) => string) => GuidancePage[]> 
   ],
 }
 
+function resolveInitialPage(): number {
+  const pageQuery = route.query.page as string | undefined
+  if (pageQuery === 'presets') {
+    const defs = PAGE_DEFS[route.params.intent as string]
+    return defs ? defs(t).length : 0
+  }
+  return Number(pageQuery) || 0
+}
+const page = ref(resolveInitialPage())
+
 const INTENT_PRESET_TAGS: Record<string, string> = {
   sleep: 'Sleep and rest',
   anxiety: 'Anxiety reduction',
@@ -185,6 +186,14 @@ function selectPreset(presetKey: string) {
   // PlaybackView will reuse this same context after navigation.
   warmup()
   router.push({ name: 'playback', params: { preset: presetKey } })
+}
+
+function goBack() {
+  if (page.value > 0) {
+    page.value--
+  } else {
+    router.push({ name: 'onboarding', query: { step: '1' } })
+  }
 }
 
 function goToHowItWorks() {
