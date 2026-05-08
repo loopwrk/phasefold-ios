@@ -70,7 +70,7 @@ import { useI18n } from 'vue-i18n'
 import AppButton from '../components/Buttons/AppButton.vue'
 import AppIcon from '../components/Icons/AppIcon.vue'
 import PresetCard from '../components/Cards/PresetCard.vue'
-import { PRESETS } from '../data/presets'
+import { PRESETS, type Intent } from '../data/presets'
 import { warmup } from '../engine/audioContext'
 
 const { t, tm } = useI18n()
@@ -154,12 +154,6 @@ function resolveInitialPage(): number {
 }
 const page = ref(resolveInitialPage())
 
-const INTENT_PRESET_TAGS: Record<string, string> = {
-  sleep: 'Sleep and rest',
-  anxiety: 'Anxiety reduction',
-  focus: 'Cognitive enhancement',
-}
-
 const guidancePages = computed(() => PAGE_DEFS[intentSlug.value]?.(t) ?? [])
 const currentPage = computed<GuidancePage>(() =>
   guidancePages.value[page.value] ?? { body: [], cta: '' }
@@ -169,13 +163,12 @@ const currentPage = computed<GuidancePage>(() =>
 const totalPages = computed(() => guidancePages.value.length + 1)
 const presetPageIndex = computed(() => guidancePages.value.length)
 
-// Filter presets by intent tag; return both the full key and a cleaned display name
+// Filter presets by intent; return both the full key and a cleaned display name
 const intentPresets = computed(() => {
-  const tag = INTENT_PRESET_TAGS[intentSlug.value]
-  if (!tag) return []
-  return Object.keys(PRESETS)
-    .filter((name) => name.includes(`(${tag})`))
-    .map((key) => ({
+  const slug = intentSlug.value as Intent
+  return Object.entries(PRESETS)
+    .filter(([, preset]) => preset.intents.includes(slug))
+    .map(([key]) => ({
       key,
       displayName: key.replace(/\s*\([^)]+\)$/, ''),
     }))

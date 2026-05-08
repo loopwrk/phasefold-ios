@@ -120,16 +120,10 @@ function onStop() {
   playbackTime.value = 0
 }
 
-// Map preset tag back to intent slug for navigation
-const TAG_TO_INTENT: Record<string, string> = {
-  'Sleep and rest': 'sleep',
-  'Anxiety reduction': 'anxiety',
-  'Cognitive enhancement': 'focus',
-}
-
+// Derive intent from the preset's intents array
 const intentSlug = computed(() => {
-  const match = presetKey.value.match(/\(([^)]+)\)$/)
-  return match ? TAG_TO_INTENT[match[1]] ?? 'sleep' : 'sleep'
+  const preset = PRESETS[presetKey.value]
+  return preset?.intents[0] ?? 'sleep'
 })
 
 function goToPresets() {

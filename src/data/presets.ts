@@ -1,3 +1,5 @@
+export type Intent = "sleep" | "anxiety" | "focus";
+
 export interface PresetValues {
   dur: number;
   baseF0: number;
@@ -6,6 +8,7 @@ export interface PresetValues {
   breathRate: number;
   binauralDeltaHz0: number;
   binauralAmount: number;
+  intents: Intent[];
 }
 
 export const PRESETS: Record<string, PresetValues> = {
@@ -17,6 +20,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012,
     binauralDeltaHz0: 1.2,
     binauralAmount: 0.05,
+    intents: ["sleep"],
   },
 
   "Delta - Moonrise (Sleep and rest)": {
@@ -27,6 +31,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.083,
     binauralDeltaHz0: 2.0,
     binauralAmount: 0.26,
+    intents: ["sleep"],
   },
 
   "Delta - Crossing Currents (Sleep and rest)": {
@@ -37,6 +42,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.05,
     binauralDeltaHz0: 1.7,
     binauralAmount: 0.6,
+    intents: ["sleep"],
   },
 
   "Delta - Nightfall Resonance (Sleep and rest)": {
@@ -47,6 +53,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012, // Restorative
     binauralDeltaHz0: 3.4,
     binauralAmount: 0.15,
+    intents: ["sleep"],
   },
 
   "Theta - Quieting the Storm (Anxiety reduction)": {
@@ -57,6 +64,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.083,
     binauralDeltaHz0: 7.0,
     binauralAmount: 0.5,
+    intents: ["anxiety"],
   },
 
   "Theta - Deep Swell (Anxiety reduction)": {
@@ -67,6 +75,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.005,
     binauralDeltaHz0: 7.83,
     binauralAmount: 0.5,
+    intents: ["anxiety"],
   },
 
   // 10 Hz: most clinically studied alpha frequency.
@@ -81,6 +90,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012, // Restorative
     binauralDeltaHz0: 10.0,
     binauralAmount: 0.4,
+    intents: ["anxiety"],
   },
 
   // 9.5 Hz: mid-alpha, associated with grounded meditative states.
@@ -95,6 +105,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012, // Restorative
     binauralDeltaHz0: 9.5,
     binauralAmount: 0.35,
+    intents: ["anxiety"],
   },
 
   // 8.5 Hz: alpha-theta crossover, the hypnagogic boundary.
@@ -108,6 +119,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.005, // Formless
     binauralDeltaHz0: 8.5,
     binauralAmount: 0.3,
+    intents: ["anxiety"],
   },
 
   "Beta - Uncategorised": {
@@ -118,6 +130,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012,
     binauralDeltaHz0: 14.75,
     binauralAmount: 0.6,
+    intents: [],
   },
 
   // 14 Hz: sensorimotor rhythm (SMR, 12–15 Hz).
@@ -130,6 +143,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012, // Restorative
     binauralDeltaHz0: 14.0,
     binauralAmount: 0.22,
+    intents: ["focus"],
   },
 
   // 40 Hz: the most-studied gamma frequency. Research on 40 Hz auditory
@@ -144,6 +158,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.083,
     binauralDeltaHz0: 40.0,
     binauralAmount: 0.4,
+    intents: ["focus"],
   },
 
   "Gamma - Flow State (Cognitive enhancement)": {
@@ -154,6 +169,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.005,
     binauralDeltaHz0: 33.0,
     binauralAmount: 0.4,
+    intents: ["focus"],
   },
 
   "Gamma - Pulsing Precision (Cognitive enhancement)": {
@@ -164,6 +180,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.025,
     binauralDeltaHz0: 36.0,
     binauralAmount: 0.4,
+    intents: ["focus"],
   },
 
   "Gamma - Unwavering Clarity (Cognitive enhancement)": {
@@ -174,6 +191,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012,
     binauralDeltaHz0: 53.3,
     binauralAmount: 0.02,
+    intents: ["focus"],
   },
 
   "Gamma - Spark of Insight (Cognitive enhancement)": {
@@ -184,6 +202,7 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.005,
     binauralDeltaHz0: 35.0,
     binauralAmount: 0.4,
+    intents: ["focus"],
   },
 
   "Gamma - Neural Massage (Cognitive enhancement)": {
@@ -194,5 +213,6 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.005,
     binauralDeltaHz0: 38.0,
     binauralAmount: 0.4,
+    intents: ["focus"],
   },
 };
