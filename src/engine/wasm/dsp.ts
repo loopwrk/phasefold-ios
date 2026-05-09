@@ -23,6 +23,10 @@ import wasmInit, {
   interp as wasmInterp,
   stabilize_state as wasmStabilizeState,
   apply_phi as wasmApplyPhi,
+  synthesize_layer as wasmSynthesizeLayer,
+  mix_layers as wasmMixLayers,
+  apply_base_tone_and_harmonics as wasmApplyBaseToneAndHarmonics,
+  apply_stereo_binaural as wasmApplyStereoBinaural,
   SeededRNG as WasmSeededRNG,
 } from '../../../crate/pkg/phasefold_dsp.js'
 
@@ -109,6 +113,110 @@ export function applyPhi(
 ): [number, number] {
   const result = wasmApplyPhi(v[0], v[1], lam, thetaStep, eps)
   return [result[0], result[1]]
+}
+
+/**
+ * Inner loop of layer synthesis - Rust/Wasm implementation.
+ * Signature matches the swappable function in dsp.ts.
+ */
+export function synthesizeLayer(
+  convGain: Float32Array,
+  ctrlL: Float32Array,
+  baseF: Float32Array,
+  driftPhase: Float32Array,
+  cents: Float32Array,
+  phase0: Float32Array,
+  layerDetune: number,
+  fmScale: number,
+  amScale: number,
+  sampleRate: number,
+): Float32Array {
+  const result = wasmSynthesizeLayer(
+    convGain, ctrlL, baseF, driftPhase,
+    cents, phase0, layerDetune, fmScale, amScale, sampleRate,
+  )
+  return result instanceof Float32Array ? result : new Float32Array(result)
+}
+
+/**
+ * Collapse-aware layer weighting - Rust/Wasm implementation.
+ * Accepts layerSums as an array of Float32Arrays (one per layer),
+ * flattens them for the Wasm call, and returns the weighted mix.
+ */
+export function mixLayers(
+  layerSums: Float32Array[],
+  activityEnv: Float32Array,
+): Float32Array {
+  const layers = layerSums.length
+  if (layers === 0) return new Float32Array(activityEnv.length)
+  const n = activityEnv.length
+
+  const flat = new Float32Array(layers * n)
+  for (let ell = 0; ell < layers; ell++) {
+    flat.set(layerSums[ell], ell * n)
+  }
+
+  const result = wasmMixLayers(flat, activityEnv, layers)
+  return result instanceof Float32Array ? result : new Float32Array(result)
+}
+
+/**
+ * Base tone + Chebyshev harmonics - Rust/Wasm implementation.
+ * Signature matches the swappable function in dsp.ts.
+ */
+export function applyBaseToneAndHarmonics(
+  mix: Float32Array,
+  baseF0: number,
+  sampleRate: number,
+  ampEnv: Float32Array,
+  breath: Float32Array,
+  voiceEmergeEnv: Float32Array,
+  convGain: Float32Array,
+  baseEffectsEnv: Float32Array,
+  overtonePower: number,
+  harmonicEven: number,
+  harmonicOdd: number,
+): Float32Array {
+  const result = wasmApplyBaseToneAndHarmonics(
+    mix, baseF0, sampleRate, ampEnv, breath,
+    voiceEmergeEnv, convGain, baseEffectsEnv,
+    overtonePower, harmonicEven, harmonicOdd,
+  )
+  return result instanceof Float32Array ? result : new Float32Array(result)
+}
+
+/**
+ * Stereo + binaural rendering - Rust/Wasm implementation.
+ * Returns { left: Float32Array, right: Float32Array } de-interleaved
+ * from the Wasm output.
+ */
+export function applyStereoBinaural(
+  mix: Float32Array,
+  convGain: Float32Array,
+  baseEffectsEnv: Float32Array,
+  breath: Float32Array,
+  stereoWidthLFO: Float32Array,
+  sampleTimes: Float32Array,
+  baseF0: number,
+  sampleRate: number,
+  binauralDeltaHz0: number,
+  binauralAmount: number,
+  breathRate: number,
+): { left: Float32Array; right: Float32Array } {
+  const raw = wasmApplyStereoBinaural(
+    mix, convGain, baseEffectsEnv, breath,
+    stereoWidthLFO, sampleTimes,
+    baseF0, sampleRate, binauralDeltaHz0, binauralAmount, breathRate,
+  )
+  const interleaved = raw instanceof Float32Array ? raw : new Float32Array(raw)
+  const n = interleaved.length / 2
+  const left = new Float32Array(n)
+  const right = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    left[i] = interleaved[2 * i]
+    right[i] = interleaved[2 * i + 1]
+  }
+  return { left, right }
 }
 
 /**

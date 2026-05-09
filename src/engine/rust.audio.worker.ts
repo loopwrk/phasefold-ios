@@ -14,6 +14,10 @@ import {
   setSeededRNGFactory,
   setStabilizeStateImpl,
   setApplyPhiImpl,
+  setSynthesizeLayerImpl,
+  setMixLayersImpl,
+  setApplyBaseToneAndHarmonicsImpl,
+  setApplyStereoBinauralImpl,
 } from './dsp'
 import {
   initWasm,
@@ -22,6 +26,10 @@ import {
   interp as wasmInterp,
   stabilizeState as wasmStabilizeState,
   applyPhi as wasmApplyPhi,
+  synthesizeLayer as wasmSynthesizeLayer,
+  mixLayers as wasmMixLayers,
+  applyBaseToneAndHarmonics as wasmApplyBaseToneAndHarmonics,
+  applyStereoBinaural as wasmApplyStereoBinaural,
   SeededRNG as WasmSeededRNG,
 } from './wasm/dsp'
 import type { WorkerRequest, WorkerResponse } from './types'
@@ -46,6 +54,10 @@ worker.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       setSeededRNGFactory((seed) => new WasmSeededRNG(seed))
       setStabilizeStateImpl(wasmStabilizeState)
       setApplyPhiImpl(wasmApplyPhi)
+      setSynthesizeLayerImpl(wasmSynthesizeLayer)
+      setMixLayersImpl(wasmMixLayers)
+      setApplyBaseToneAndHarmonicsImpl(wasmApplyBaseToneAndHarmonics)
+      setApplyStereoBinauralImpl(wasmApplyStereoBinaural)
       wasmReady = true
       console.log('[phasefold rust-worker] Wasm initialised, all DSP functions swapped')
     }

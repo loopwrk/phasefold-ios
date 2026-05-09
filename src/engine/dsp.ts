@@ -280,6 +280,295 @@ export function setApplyPhiImpl(impl: ApplyPhiFn): void {
 }
 
 // ────────────────────────────────────────────────
+// Layer synthesis inner loop
+// ────────────────────────────────────────────────
+
+export type SynthesizeLayerFn = (
+  convGain: Float32Array,
+  ctrlL: Float32Array,
+  baseF: Float32Array,
+  driftPhase: Float32Array,
+  cents: Float32Array,
+  phase0: Float32Array,
+  layerDetune: number,
+  fmScale: number,
+  amScale: number,
+  sampleRate: number,
+) => Float32Array;
+
+const TWO_PI_DSP = 2 * Math.PI;
+
+function synthesizeLayerTS(
+  convGain: Float32Array,
+  ctrlL: Float32Array,
+  baseF: Float32Array,
+  driftPhase: Float32Array,
+  cents: Float32Array,
+  phase0: Float32Array,
+  layerDetune: number,
+  fmScale: number,
+  amScale: number,
+  sampleRate: number,
+): Float32Array {
+  const N = convGain.length;
+  const voices = cents.length;
+  if (N === 0 || voices === 0) return new Float32Array(N);
+
+  const phaseModL = new Float32Array(N);
+  let cumMod = 0;
+  for (let i = 0; i < N; i++) {
+    const fmL = Math.min(fmScale * convGain[i], 0.6);
+    cumMod += (TWO_PI_DSP * ctrlL[i] * fmL) / sampleRate;
+    phaseModL[i] = cumMod;
+  }
+
+  const midsumL = new Float32Array(N);
+  for (let v = 0; v < voices; v++) {
+    const centV = cents[v];
+    let phaseCum = phase0[v];
+    for (let i = 0; i < N; i++) {
+      const df = Math.pow(2, (centV / 1200.0) * convGain[i]);
+      phaseCum += (TWO_PI_DSP * df * baseF[i] * layerDetune) / sampleRate;
+      const totalPhase = phaseCum + driftPhase[i] + phaseModL[i];
+      const amL = Math.min(amScale * convGain[i], 0.4);
+      const amp = 1 - amL + amL * ctrlL[i];
+      midsumL[i] += Math.sin(totalPhase) * amp;
+    }
+  }
+
+  for (let i = 0; i < N; i++) midsumL[i] /= voices;
+  return midsumL;
+}
+
+let synthesizeLayerImpl: SynthesizeLayerFn = synthesizeLayerTS;
+
+export function synthesizeLayer(
+  convGain: Float32Array, ctrlL: Float32Array, baseF: Float32Array,
+  driftPhase: Float32Array, cents: Float32Array, phase0: Float32Array,
+  layerDetune: number, fmScale: number, amScale: number, sampleRate: number,
+): Float32Array {
+  return synthesizeLayerImpl(convGain, ctrlL, baseF, driftPhase, cents, phase0, layerDetune, fmScale, amScale, sampleRate);
+}
+
+export function setSynthesizeLayerImpl(impl: SynthesizeLayerFn): void {
+  synthesizeLayerImpl = impl;
+}
+
+// ────────────────────────────────────────────────
+// Collapse-aware layer weighting
+// ────────────────────────────────────────────────
+
+export type MixLayersFn = (
+  layerSums: Float32Array[],
+  activityEnv: Float32Array,
+) => Float32Array;
+
+function mixLayersTS(
+  layerSums: Float32Array[],
+  activityEnv: Float32Array,
+): Float32Array {
+  const layers = layerSums.length;
+  const N = activityEnv.length;
+  if (N === 0 || layers === 0) return new Float32Array(N);
+
+  const mix = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    let wSum = 0;
+    let signal = 0;
+    for (let ell = 0; ell < layers; ell++) {
+      const w = Math.pow(activityEnv[i], ell + 1);
+      signal += w * layerSums[ell][i];
+      wSum += w;
+    }
+    mix[i] = signal / Math.max(1e-9, wSum);
+  }
+  return mix;
+}
+
+let mixLayersImpl: MixLayersFn = mixLayersTS;
+
+export function mixLayers(
+  layerSums: Float32Array[],
+  activityEnv: Float32Array,
+): Float32Array {
+  return mixLayersImpl(layerSums, activityEnv);
+}
+
+export function setMixLayersImpl(impl: MixLayersFn): void {
+  mixLayersImpl = impl;
+}
+
+// ────────────────────────────────────────────────
+// Base tone + Chebyshev harmonics
+// ────────────────────────────────────────────────
+
+export type ApplyBaseToneAndHarmonicsFn = (
+  mix: Float32Array,
+  baseF0: number,
+  sampleRate: number,
+  ampEnv: Float32Array,
+  breath: Float32Array,
+  voiceEmergeEnv: Float32Array,
+  convGain: Float32Array,
+  baseEffectsEnv: Float32Array,
+  overtonePower: number,
+  harmonicEven: number,
+  harmonicOdd: number,
+) => Float32Array;
+
+function applyBaseToneAndHarmonicsTS(
+  mix: Float32Array,
+  baseF0: number,
+  sampleRate: number,
+  ampEnv: Float32Array,
+  breath: Float32Array,
+  voiceEmergeEnv: Float32Array,
+  convGain: Float32Array,
+  baseEffectsEnv: Float32Array,
+  overtonePower: number,
+  harmonicEven: number,
+  harmonicOdd: number,
+): Float32Array {
+  const N = mix.length;
+  if (N === 0) return new Float32Array(0);
+
+  const out = new Float32Array(N);
+
+  // Section 14: base tone
+  let basePhaseAcc = 0;
+  for (let i = 0; i < N; i++) {
+    basePhaseAcc += (TWO_PI_DSP * baseF0) / sampleRate;
+    const core = Math.sin(basePhaseAcc) * ampEnv[i] * (0.5 + 0.5 * breath[i]);
+    const gain = Math.max(0.75, Math.min(1.25,
+      1.0 + 0.15 * (1 - voiceEmergeEnv[i]) - 0.1 * voiceEmergeEnv[i] * convGain[i],
+    ));
+    const baseTone = core * gain;
+    out[i] = Math.tanh(0.9 * (baseTone + (mix[i] - baseTone) * voiceEmergeEnv[i]));
+  }
+
+  // Section 15: Chebyshev harmonics
+  for (let i = 0; i < N; i++) {
+    const x = Math.max(-1, Math.min(1, out[i]));
+    const even = 2 * x * x - 1;
+    const odd = 4 * x * x * x - 3 * x;
+    const env = Math.pow(convGain[i], overtonePower) * baseEffectsEnv[i];
+    out[i] = Math.tanh(out[i] + env * (harmonicEven * even + harmonicOdd * odd));
+  }
+
+  return out;
+}
+
+let applyBaseToneAndHarmonicsImpl: ApplyBaseToneAndHarmonicsFn = applyBaseToneAndHarmonicsTS;
+
+export function applyBaseToneAndHarmonics(
+  mix: Float32Array, baseF0: number, sampleRate: number,
+  ampEnv: Float32Array, breath: Float32Array, voiceEmergeEnv: Float32Array,
+  convGain: Float32Array, baseEffectsEnv: Float32Array,
+  overtonePower: number, harmonicEven: number, harmonicOdd: number,
+): Float32Array {
+  return applyBaseToneAndHarmonicsImpl(mix, baseF0, sampleRate, ampEnv, breath, voiceEmergeEnv, convGain, baseEffectsEnv, overtonePower, harmonicEven, harmonicOdd);
+}
+
+export function setApplyBaseToneAndHarmonicsImpl(impl: ApplyBaseToneAndHarmonicsFn): void {
+  applyBaseToneAndHarmonicsImpl = impl;
+}
+
+// ────────────────────────────────────────────────
+// Stereo + binaural rendering
+// ────────────────────────────────────────────────
+
+export type ApplyStereoBinauralFn = (
+  mix: Float32Array,
+  convGain: Float32Array,
+  baseEffectsEnv: Float32Array,
+  breath: Float32Array,
+  stereoWidthLFO: Float32Array,
+  sampleTimes: Float32Array,
+  baseF0: number,
+  sampleRate: number,
+  binauralDeltaHz0: number,
+  binauralAmount: number,
+  breathRate: number,
+) => { left: Float32Array; right: Float32Array };
+
+function applyStereoBinauralTS(
+  mix: Float32Array,
+  convGain: Float32Array,
+  baseEffectsEnv: Float32Array,
+  breath: Float32Array,
+  stereoWidthLFO: Float32Array,
+  sampleTimes: Float32Array,
+  baseF0: number,
+  sampleRate: number,
+  binauralDeltaHz0: number,
+  binauralAmount: number,
+  breathRate: number,
+): { left: Float32Array; right: Float32Array } {
+  const N = mix.length;
+  const L = new Float32Array(N);
+  const R = new Float32Array(N);
+
+  if (N === 0) return { left: L, right: R };
+
+  // Binaural oscillators
+  const bL = new Float32Array(N);
+  const bR = new Float32Array(N);
+  let binLPhase = 0;
+  let binRPhase = 0;
+  const BD_DEPTH = 0.1;
+  for (let i = 0; i < N; i++) {
+    const binEnv = Math.pow(convGain[i], 1.4);
+    const binauralDeltaModulated =
+      binauralDeltaHz0 * (1 + BD_DEPTH * Math.sin(TWO_PI_DSP * breathRate * sampleTimes[i]));
+    const deltaT = binauralDeltaModulated * binEnv * baseEffectsEnv[i];
+    binLPhase += (TWO_PI_DSP * (baseF0 - 0.5 * deltaT)) / sampleRate;
+    binRPhase += (TWO_PI_DSP * (baseF0 + 0.5 * deltaT)) / sampleRate;
+    bL[i] = Math.sin(binLPhase);
+    bR[i] = Math.sin(binRPhase);
+  }
+
+  // Stereo delay (48 samples ~ 1.1 ms)
+  const delaySamps = 48;
+  const delayed = new Float32Array(N);
+  for (let i = delaySamps; i < N; i++) {
+    delayed[i] = mix[i - delaySamps];
+  }
+
+  // Compose L / R
+  for (let i = 0; i < N; i++) {
+    const binEnv = Math.pow(convGain[i], 1.4);
+    const be = baseEffectsEnv[i];
+    const breathPan = convGain[i] * be;
+    const breathL = 0.5 + breathPan * (0.1 + 0.4 * breath[i] - 0.5);
+    const breathR = 0.5 + breathPan * (0.1 + 0.4 * (1 - breath[i]) - 0.5);
+
+    const lBase = mix[i] * breathL + binauralAmount * binEnv * bL[i];
+    const rBase = mix[i] * breathR + binauralAmount * binEnv * bR[i];
+
+    const stEnv = 0.5 * stereoWidthLFO[i] * convGain[i] * be;
+    L[i] = lBase + stEnv * delayed[i];
+    R[i] = rBase - stEnv * delayed[i];
+  }
+
+  return { left: L, right: R };
+}
+
+let applyStereoBinauralImpl: ApplyStereoBinauralFn = applyStereoBinauralTS;
+
+export function applyStereoBinaural(
+  mix: Float32Array, convGain: Float32Array, baseEffectsEnv: Float32Array,
+  breath: Float32Array, stereoWidthLFO: Float32Array, sampleTimes: Float32Array,
+  baseF0: number, sampleRate: number,
+  binauralDeltaHz0: number, binauralAmount: number, breathRate: number,
+): { left: Float32Array; right: Float32Array } {
+  return applyStereoBinauralImpl(mix, convGain, baseEffectsEnv, breath, stereoWidthLFO, sampleTimes, baseF0, sampleRate, binauralDeltaHz0, binauralAmount, breathRate);
+}
+
+export function setApplyStereoBinauralImpl(impl: ApplyStereoBinauralFn): void {
+  applyStereoBinauralImpl = impl;
+}
+
+// ────────────────────────────────────────────────
 // Note naming
 // ────────────────────────────────────────────────
 

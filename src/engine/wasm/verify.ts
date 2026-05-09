@@ -14,6 +14,10 @@ import {
   interp as tsInterp,
   stabilizeState as tsStabilizeState,
   applyPhi as tsApplyPhi,
+  synthesizeLayer as tsSynthesizeLayer,
+  mixLayers as tsMixLayers,
+  applyBaseToneAndHarmonics as tsApplyBaseToneAndHarmonics,
+  applyStereoBinaural as tsApplyStereoBinaural,
   SeededRNG as TSSeededRNG,
 } from '../dsp'
 import {
@@ -23,6 +27,10 @@ import {
   interp as wasmInterp,
   stabilizeState as wasmStabilizeState,
   applyPhi as wasmApplyPhi,
+  synthesizeLayer as wasmSynthesizeLayer,
+  mixLayers as wasmMixLayers,
+  applyBaseToneAndHarmonics as wasmApplyBaseToneAndHarmonics,
+  applyStereoBinaural as wasmApplyStereoBinaural,
   SeededRNG as WasmSeededRNG,
 } from './dsp'
 
@@ -332,6 +340,210 @@ export async function verify(): Promise<void> {
     const tsAll = new Float32Array([...tsCents, ...tsPhase])
     const wasmAll = new Float32Array([...wasmCents, ...wasmPhase])
     runTest('Full generator RNG sequence (5 cents + 5 phases)', tsAll, wasmAll)
+  }
+
+  // ── synthesizeLayer tests ─────────────────────
+
+  console.log('\n── synthesizeLayer ──')
+
+  // Single voice, no modulation
+  {
+    const N = 4410
+    const conv = new Float32Array(N).fill(0.0)
+    const ctrl = new Float32Array(N).fill(0.5)
+    const bf = new Float32Array(N).fill(440.0)
+    const drift = new Float32Array(N).fill(0.0)
+    const c = new Float32Array([0.0])
+    const p = new Float32Array([0.0])
+    runTest(
+      'synthesizeLayer - single voice, no modulation',
+      tsSynthesizeLayer(conv, ctrl, bf, drift, c, p, 1.0, 0.1, 0.1, 44100),
+      wasmSynthesizeLayer(conv, ctrl, bf, drift, c, p, 1.0, 0.1, 0.1, 44100),
+    )
+  }
+
+  // Realistic: 5 voices, full modulation
+  {
+    const N = 44100
+    const sr = 44100
+    const conv = Float32Array.from({ length: N }, (_, i) => 0.9 * (1 - Math.pow(i / (N - 1), 2)))
+    const ctrl = Float32Array.from({ length: N }, (_, i) => 0.5 + 0.3 * Math.sin(2 * Math.PI * 0.1 * (i / sr)))
+    const bf = new Float32Array(N).fill(174.0)
+    const drift = Float32Array.from({ length: N }, (_, i) => 2 * Math.PI * 0.02 * conv[i] * (i / sr))
+    const rng = new TSSeededRNG(2025)
+    const c = rng.normalArray(0, 12, 5)
+    const p = rng.uniformArray(0, 2 * Math.PI, 5)
+    runTest(
+      'synthesizeLayer - 5 voices, realistic (1s @ 44.1kHz)',
+      tsSynthesizeLayer(conv, ctrl, bf, drift, c, p, 1.001, 0.3, 0.2, sr),
+      wasmSynthesizeLayer(conv, ctrl, bf, drift, c, p, 1.001, 0.3, 0.2, sr),
+    )
+  }
+
+  // Empty
+  {
+    runTest(
+      'synthesizeLayer - empty',
+      tsSynthesizeLayer(new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array([1]), new Float32Array([0]), 1.0, 0.0, 0.0, 44100),
+      wasmSynthesizeLayer(new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array([1]), new Float32Array([0]), 1.0, 0.0, 0.0, 44100),
+    )
+  }
+
+  // ── mixLayers tests ──────────────────────────
+
+  console.log('\n── mixLayers ──')
+
+  // Single layer
+  {
+    const N = 1000
+    const layer = Float32Array.from({ length: N }, (_, i) => Math.sin(2 * Math.PI * 440 * (i / 44100)))
+    const activity = new Float32Array(N).fill(0.8)
+    runTest(
+      'mixLayers - single layer',
+      tsMixLayers([layer], activity),
+      wasmMixLayers([layer], activity),
+    )
+  }
+
+  // 3 layers, decaying activity
+  {
+    const N = 44100
+    const activity = Float32Array.from({ length: N }, (_, i) => 0.9 * (1 - Math.pow(i / (N - 1), 2)))
+    const layers: Float32Array[] = []
+    for (let ell = 0; ell < 3; ell++) {
+      layers.push(Float32Array.from({ length: N }, (_, i) =>
+        Math.sin(2 * Math.PI * (174 + ell * 5) * (i / 44100)) * (1 - ell * 0.2)
+      ))
+    }
+    runTest(
+      'mixLayers - 3 layers, decaying activity (1s)',
+      tsMixLayers(layers, activity),
+      wasmMixLayers(layers, activity),
+    )
+  }
+
+  // Empty
+  {
+    runTest(
+      'mixLayers - empty',
+      tsMixLayers([], new Float32Array(0)),
+      wasmMixLayers([], new Float32Array(0)),
+    )
+  }
+
+  // ── applyBaseToneAndHarmonics tests ──────────
+
+  console.log('\n── applyBaseToneAndHarmonics ──')
+
+  // Realistic params
+  {
+    const N = 44100
+    const mix = Float32Array.from({ length: N }, (_, i) => 0.3 * Math.sin(2 * Math.PI * 174 * (i / 44100)))
+    const amp = Float32Array.from({ length: N }, (_, i) => 0.6 + 0.4 * (i / (N - 1)))
+    const breath = Float32Array.from({ length: N }, (_, i) => 0.5 * (1 + Math.sin(2 * Math.PI * 0.15 * (i / 44100))))
+    const ve = Float32Array.from({ length: N }, (_, i) => Math.min(1, i / 22050))
+    const conv = Float32Array.from({ length: N }, (_, i) => 0.9 * (1 - Math.pow(i / (N - 1), 2)))
+    const be = Float32Array.from({ length: N }, (_, i) => Math.min(1, i / 10000))
+    runTest(
+      'applyBaseToneAndHarmonics - realistic (1s @ 44.1kHz)',
+      tsApplyBaseToneAndHarmonics(mix, 174.0, 44100, amp, breath, ve, conv, be, 1.0, 0.08, 0.05),
+      wasmApplyBaseToneAndHarmonics(mix, 174.0, 44100, amp, breath, ve, conv, be, 1.0, 0.08, 0.05),
+    )
+  }
+
+  // No harmonics (even=0, odd=0)
+  {
+    const N = 4410
+    const mix = Float32Array.from({ length: N }, (_, i) => 0.5 * Math.sin(2 * Math.PI * 440 * (i / 44100)))
+    const amp = new Float32Array(N).fill(0.8)
+    const breath = new Float32Array(N).fill(0.5)
+    const ve = new Float32Array(N).fill(1.0)
+    const conv = new Float32Array(N).fill(0.5)
+    const be = new Float32Array(N).fill(1.0)
+    runTest(
+      'applyBaseToneAndHarmonics - no harmonics',
+      tsApplyBaseToneAndHarmonics(mix, 440.0, 44100, amp, breath, ve, conv, be, 1.0, 0.0, 0.0),
+      wasmApplyBaseToneAndHarmonics(mix, 440.0, 44100, amp, breath, ve, conv, be, 1.0, 0.0, 0.0),
+    )
+  }
+
+  // Empty
+  {
+    runTest(
+      'applyBaseToneAndHarmonics - empty',
+      tsApplyBaseToneAndHarmonics(new Float32Array(0), 174.0, 44100, new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), 1.0, 0.1, 0.1),
+      wasmApplyBaseToneAndHarmonics(new Float32Array(0), 174.0, 44100, new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), 1.0, 0.1, 0.1),
+    )
+  }
+
+  // ── applyStereoBinaural tests ─────────────────
+
+  console.log('\n── applyStereoBinaural ──')
+
+  // Helper to compare stereo pairs
+  function runStereoTest(
+    name: string,
+    ts: { left: Float32Array; right: Float32Array },
+    wasm: { left: Float32Array; right: Float32Array },
+  ) {
+    const cmpL = compareBuffers(ts.left, wasm.left)
+    const cmpR = compareBuffers(ts.right, wasm.right)
+    const passed = cmpL.passed && cmpR.passed
+    const maxErr = Math.max(cmpL.maxAbsError, cmpR.maxAbsError)
+    const meanErr = (cmpL.meanAbsError + cmpR.meanAbsError) / 2
+    console.log(
+      `[${passed ? 'PASS' : 'FAIL'}] ${name}` +
+        ` — ${cmpL.sampleCount} samples/ch` +
+        `, max error: ${maxErr.toExponential(3)}` +
+        `, mean error: ${meanErr.toExponential(3)}` +
+        (!cmpL.passed && cmpL.failedAt !== undefined ? ` (L diverged at ${cmpL.failedAt})` : '') +
+        (!cmpR.passed && cmpR.failedAt !== undefined ? ` (R diverged at ${cmpR.failedAt})` : ''),
+    )
+    if (!passed) allPassed = false
+  }
+
+  // Realistic stereo rendering
+  {
+    const N = 44100
+    const sr = 44100
+    const mix = Float32Array.from({ length: N }, (_, i) => 0.3 * Math.sin(2 * Math.PI * 174 * (i / sr)))
+    const conv = Float32Array.from({ length: N }, (_, i) => 0.9 * (1 - Math.pow(i / (N - 1), 2)))
+    const be = Float32Array.from({ length: N }, (_, i) => Math.min(1, i / 10000))
+    const br = Float32Array.from({ length: N }, (_, i) => 0.5 * (1 + Math.sin(2 * Math.PI * 0.15 * (i / sr))))
+    const sw = Float32Array.from({ length: N }, (_, i) => 0.7 - 0.05 * Math.sin(2 * Math.PI * 0.15 * (i / sr)))
+    const st = Float32Array.from({ length: N }, (_, i) => i / sr)
+    runStereoTest(
+      'applyStereoBinaural - realistic (1s @ 44.1kHz)',
+      tsApplyStereoBinaural(mix, conv, be, br, sw, st, 174.0, sr, 4.0, 0.3, 0.15),
+      wasmApplyStereoBinaural(mix, conv, be, br, sw, st, 174.0, sr, 4.0, 0.3, 0.15),
+    )
+  }
+
+  // Zero binaural delta (mono binaural)
+  {
+    const N = 4410
+    const sr = 44100
+    const mix = Float32Array.from({ length: N }, (_, i) => 0.5 * Math.sin(2 * Math.PI * 440 * (i / sr)))
+    const conv = new Float32Array(N).fill(0.5)
+    const be = new Float32Array(N).fill(1.0)
+    const br = new Float32Array(N).fill(0.5)
+    const sw = new Float32Array(N).fill(0.7)
+    const st = Float32Array.from({ length: N }, (_, i) => i / sr)
+    runStereoTest(
+      'applyStereoBinaural - zero binaural delta',
+      tsApplyStereoBinaural(mix, conv, be, br, sw, st, 440.0, sr, 0.0, 0.3, 0.15),
+      wasmApplyStereoBinaural(mix, conv, be, br, sw, st, 440.0, sr, 0.0, 0.3, 0.15),
+    )
+  }
+
+  // Empty
+  {
+    const empty = new Float32Array(0)
+    runStereoTest(
+      'applyStereoBinaural - empty',
+      tsApplyStereoBinaural(empty, empty, empty, empty, empty, empty, 174.0, 44100, 4.0, 0.3, 0.15),
+      wasmApplyStereoBinaural(empty, empty, empty, empty, empty, empty, 174.0, 44100, 4.0, 0.3, 0.15),
+    )
   }
 
   console.log(

@@ -24,6 +24,10 @@ import {
   smoothEnvelope,
   stabilizeState,
   applyPhi,
+  synthesizeLayer,
+  mixLayers,
+  applyBaseToneAndHarmonics,
+  applyStereoBinaural,
 } from "./dsp";
 
 const TWO_PI = 2 * Math.PI;
@@ -266,39 +270,11 @@ export function generateAudio(
     const fmScale = fmIndex0 * Math.pow(alphaFm, ell);
     const amScale = amIndex0 * Math.pow(betaAm, ell);
 
-    // FM phase modulation for this layer (1-D cumsum)
-    const phaseModL = new Float32Array(N);
-    let cumMod = 0;
-    for (let i = 0; i < N; i++) {
-      const fmL = Math.min(fmScale * convGain[i], 0.6);
-      cumMod += (TWO_PI * ctrlL[i] * fmL) / sampleRate;
-      phaseModL[i] = cumMod;
-    }
-
-    // Sum across voices (one voice at a time to save memory)
-    const midsumL = new Float32Array(N);
-
-    for (let v = 0; v < voices; v++) {
-      const centV = cents[v];
-      let phaseCum = phase0[v];
-
-      for (let i = 0; i < N; i++) {
-        // Time-varying detune: 2^((cents/1200) * convergenceGain)
-        const df = Math.pow(2, (centV / 1200.0) * convGain[i]);
-        phaseCum += (TWO_PI * df * baseF[i] * layerDetune[ell]) / sampleRate;
-
-        const totalPhase = phaseCum + driftPhase[i] + phaseModL[i];
-
-        // AM from this layer
-        const amL = Math.min(amScale * convGain[i], 0.4);
-        const amp = 1 - amL + amL * ctrlL[i];
-
-        midsumL[i] += Math.sin(totalPhase) * amp;
-      }
-    }
-
-    // Average across voices
-    for (let i = 0; i < N; i++) midsumL[i] /= voices;
+    const midsumL = synthesizeLayer(
+      convGain, ctrlL, baseF, driftPhase,
+      cents, phase0, layerDetune[ell],
+      fmScale, amScale, sampleRate,
+    );
 
     layerSums.push(midsumL);
     onProgress?.(
@@ -308,74 +284,20 @@ export function generateAudio(
   }
 
   // ── 13. Collapse-aware layer weighting ────────
-  const mix = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    let wSum = 0;
-    let signal = 0;
-    for (let ell = 0; ell < layers; ell++) {
-      const w = Math.pow(activityEnv[i], ell + 1);
-      signal += w * layerSums[ell][i];
-      wSum += w;
-    }
-    mix[i] = signal / Math.max(1e-9, wSum);
-  }
+  const mix = mixLayers(layerSums, activityEnv);
 
   onProgress?.(68, "Layer weighting");
 
-  // ── 14. Base tone ─────────────────────────────
-  let basePhaseAcc = 0;
-  for (let i = 0; i < N; i++) {
-    basePhaseAcc += (TWO_PI * baseF0) / sampleRate;
-    const core = Math.sin(basePhaseAcc) * ampEnv[i] * (0.5 + 0.5 * breath[i]);
-    const gain = Math.max(
-      0.75,
-      Math.min(
-        1.25,
-        1.0 +
-          0.15 * (1 - voiceEmergeEnv[i]) -
-          0.1 * voiceEmergeEnv[i] * convGain[i],
-      ),
-    );
-    const baseTone = core * gain;
-
-    // Combine: base anchors, layers emerge via voiceEmergeEnv
-    mix[i] = baseTone + (mix[i] - baseTone) * voiceEmergeEnv[i];
-    mix[i] = Math.tanh(0.9 * mix[i]);
-  }
-
-  // ── 15. Chebyshev harmonics (even T2 / odd T3) ─
-  // Automatically computed from baseF0 and binauralDeltaHz0 to ensure
-  // therapeutically optimal timbral enrichment without user intervention.
-  //
-  // Research basis:
-  //   - Binaural FFR works best with carriers in 200-500 Hz range
-  //     (Licklider 1950, Perrott & Nelson 1969). Phasefold carriers
-  //     span 20-220 Hz, so lower carriers benefit from harmonic
-  //     enrichment to push energy into the sensitive hearing range.
-  //   - Masking/harmonic content INCREASES perceived binaural beat
-  //     loudness and improves entrainment outcomes (Schwarz & Taylor
-  //     2005, Gao et al. 2014). Studies using masking consistently
-  //     show positive results; no-masking studies trend toward null.
-  //   - Even harmonics (T2) produce warm, round timbres appropriate
-  //     for relaxation states (delta/theta/alpha).
-  //   - Odd harmonics (T3) produce brighter, more present timbres
-  //     appropriate for alertness states (beta/gamma).
-  //
-  // Total amount: inversely proportional to base frequency.
-  //   20 Hz → 0.30 (maximum enrichment for sub-bass carriers)
-  //   220 Hz → 0.05 (minimal - already in sensitive range)
-  //
-  // Even/odd split: based on binaural delta frequency band.
-  //   Delta/theta (low delta) → mostly even (warm, sleep/meditation)
-  //   Beta/gamma (high delta) → mostly odd (bright, focus/alertness)
-  //   The oddRatio is a linear ramp from 0.15 to 0.80 across 0-50 Hz.
+  // ── 14+15. Base tone + Chebyshev harmonics ────
+  // Harmonic coefficients computed from baseF0 and binauralDeltaHz0.
+  // See collapse-curve-rationale.docx and harmonic enrichment research notes.
   const HARM_TOTAL_MAX = 0.3;
   const HARM_TOTAL_MIN = 0.05;
   const HARM_FREQ_LO = 20;
   const HARM_FREQ_HI = 220;
   const HARM_ODD_RATIO_MIN = 0.15;
   const HARM_ODD_RATIO_MAX = 0.8;
-  const HARM_ODD_RATIO_REF = 50; // Hz - delta at which oddRatio saturates
+  const HARM_ODD_RATIO_REF = 50;
 
   const freqT = Math.min(
     1,
@@ -392,66 +314,22 @@ export function generateAudio(
   const harmonicEven = harmonicTotal * (1 - oddRatio);
   const harmonicOdd = harmonicTotal * oddRatio;
 
-  for (let i = 0; i < N; i++) {
-    const x = Math.max(-1, Math.min(1, mix[i]));
-    const even = 2 * x * x - 1;
-    const odd = 4 * x * x * x - 3 * x;
-    const env = Math.pow(convGain[i], overtonePower) * baseEffectsEnv[i];
-    mix[i] = Math.tanh(
-      mix[i] + env * (harmonicEven * even + harmonicOdd * odd),
-    );
-  }
+  const processed = applyBaseToneAndHarmonics(
+    mix, baseF0, sampleRate, ampEnv, breath,
+    voiceEmergeEnv, convGain, baseEffectsEnv,
+    overtonePower, harmonicEven, harmonicOdd,
+  );
+  // Copy back into mix (downstream sections modify it in-place)
+  mix.set(processed);
 
   onProgress?.(78, "Tone + harmonics");
 
   // ── 16. Stereo + binaural ─────────────────────
-  const L = new Float32Array(N);
-  const R = new Float32Array(N);
-
-  // Binaural oscillators (phase-accumulated for stability)
-  // Binaural delta is gently modulated by the breath-rate LFO (±10% of set value)
-  // creating a slowly drifting beat frequency that mirrors the spatial breath cycle.
-  const bL = new Float32Array(N);
-  const bR = new Float32Array(N);
-  let binLPhase = 0;
-  let binRPhase = 0;
-  const BD_DEPTH = 0.1; // 10% of binauralDeltaHz0
-  for (let i = 0; i < N; i++) {
-    const binEnv = Math.pow(convGain[i], 1.4);
-    const binauralDeltaModulated =
-      binauralDeltaHz0 *
-      (1 + BD_DEPTH * Math.sin(TWO_PI * breathRate * sampleTimes[i]));
-    const deltaT = binauralDeltaModulated * binEnv * baseEffectsEnv[i];
-    binLPhase += (TWO_PI * (baseF0 - 0.5 * deltaT)) / sampleRate;
-    binRPhase += (TWO_PI * (baseF0 + 0.5 * deltaT)) / sampleRate;
-    bL[i] = Math.sin(binLPhase);
-    bR[i] = Math.sin(binRPhase);
-  }
-
-  // Stereo delay (48 samples ≈ 1.1 ms)
-  const delaySamps = 48;
-  const delayed = new Float32Array(N);
-  for (let i = delaySamps; i < N; i++) {
-    delayed[i] = mix[i - delaySamps];
-  }
-
-  // Compose L / R
-  for (let i = 0; i < N; i++) {
-    const binEnv = Math.pow(convGain[i], 1.4);
-    const be = baseEffectsEnv[i];
-    // Gate panning deviation with convGain so stereo movement
-    // converges to center (0.5/0.5) alongside everything else
-    const breathPan = convGain[i] * be;
-    const breathL = 0.5 + breathPan * (0.1 + 0.4 * breath[i] - 0.5);
-    const breathR = 0.5 + breathPan * (0.1 + 0.4 * (1 - breath[i]) - 0.5);
-
-    const lBase = mix[i] * breathL + binauralAmount * binEnv * bL[i];
-    const rBase = mix[i] * breathR + binauralAmount * binEnv * bR[i];
-
-    const stEnv = 0.5 * stereoWidthLFO[i] * convGain[i] * be;
-    L[i] = lBase + stEnv * delayed[i];
-    R[i] = rBase - stEnv * delayed[i];
-  }
+  const { left: L, right: R } = applyStereoBinaural(
+    mix, convGain, baseEffectsEnv, breath,
+    stereoWidthLFO, sampleTimes,
+    baseF0, sampleRate, binauralDeltaHz0, binauralAmount, breathRate,
+  );
 
   onProgress?.(88, "Stereo + binaural");
 
