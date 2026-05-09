@@ -520,6 +520,133 @@ pub fn apply_stereo_binaural(
     out
 }
 
+/// Post-processing pipeline (generator sections 17-21).
+///
+/// Applies fade-in, pure-tone volume envelope, collapse detection,
+/// trimming, equal-power fade-out, and headroom normalisation.
+/// Returns interleaved [L0, R0, L1, R1, ...] of the final output
+/// (may be shorter than input due to collapse trimming).
+///
+/// `activity_ctrl_smooth` and `ctrl_progress` are control-rate arrays
+/// (Nc elements) used for collapse detection.
+#[wasm_bindgen]
+pub fn finalize_stereo(
+    left: &[f32],
+    right: &[f32],
+    pure_tone_vol_env: &[f32],
+    activity_ctrl_smooth: &[f32],
+    ctrl_progress: &[f32],
+    sample_rate: f32,
+    control_hz: f32,
+) -> Vec<f32> {
+    let n = left.len();
+    if n == 0 {
+        return vec![];
+    }
+
+    let sr = sample_rate as f64;
+    let half_pi = std::f64::consts::FRAC_PI_2;
+
+    // Work on mutable copies
+    let mut l = left.to_vec();
+    let mut r = right.to_vec();
+
+    // ── 17. Fade in (0.5 s) ──────────────────────
+    let fade_in_samps = (0.5 * sr) as usize;
+    let fade_in_len = fade_in_samps.min(n);
+    let fade_in_div = if fade_in_len > 1 { (fade_in_len - 1) as f64 } else { 1.0 };
+    for i in 0..fade_in_len {
+        let f = i as f64 / fade_in_div;
+        l[i] = (l[i] as f64 * f) as f32;
+        r[i] = (r[i] as f64 * f) as f32;
+    }
+
+    // Pure tone volume envelope
+    for i in 0..n {
+        l[i] *= pure_tone_vol_env[i];
+        r[i] *= pure_tone_vol_env[i];
+    }
+
+    // ── 18. Collapse detection ────────────────────
+    let nc = activity_ctrl_smooth.len();
+    let c_hz = control_hz as f64;
+
+    // d/dt of activity at control rate
+    let mut d_ctrl = vec![0.0_f32; nc];
+    for i in 1..nc {
+        d_ctrl[i] = ((activity_ctrl_smooth[i] - activity_ctrl_smooth[i - 1]).abs()
+            * control_hz) as f32;
+    }
+
+    // Smooth the derivative (inline one-pole since we can't call the wasm export recursively)
+    let d_cutoff = 0.5_f64;
+    let alpha = 1.0 - (-2.0 * std::f64::consts::PI * d_cutoff / c_hz).exp();
+    let mut d_smooth = vec![0.0_f64; nc];
+    let mut acc = 0.0_f64;
+    for i in 0..nc {
+        acc += alpha * (d_ctrl[i] as f64 - acc);
+        d_smooth[i] = acc;
+    }
+
+    let eps = 1e-3_f64;
+    let quiet_secs = 21.0_f64;
+    let quiet_steps = (quiet_secs * c_hz).round().max(1.0) as usize;
+
+    let mut last_active: i64 = -1;
+    for i in 0..nc {
+        if d_smooth[i] > eps {
+            last_active = i as i64;
+        }
+    }
+
+    let stop_ctrl_idx = if last_active >= 0 {
+        ((last_active as usize) + quiet_steps).min(nc - 1)
+    } else {
+        nc - 1
+    };
+
+    let stop_t = ctrl_progress[stop_ctrl_idx] as f64;
+    let stop_idx = (stop_t * n as f64).round().max(1.0).min(n as f64) as usize;
+
+    // ── 19. Decide final length ───────────────────
+    let min_length = (0.85 * n as f64) as usize;
+    let out_len = if stop_idx < min_length { n } else { stop_idx };
+
+    let mut final_l: Vec<f32> = l[..out_len].to_vec();
+    let mut final_r: Vec<f32> = r[..out_len].to_vec();
+
+    // ── 20. Fade out (equal-power, 1 s) ──────────
+    let fade_out_samps = (1.0 * sr).round().min(final_l.len() as f64).max(1.0) as usize;
+    let fade_out_div = if fade_out_samps > 1 { (fade_out_samps - 1) as f64 } else { 1.0 };
+    for i in 0..fade_out_samps {
+        let f = (half_pi * i as f64 / fade_out_div).cos();
+        let idx = final_l.len() - fade_out_samps + i;
+        final_l[idx] = (final_l[idx] as f64 * f) as f32;
+        final_r[idx] = (final_r[idx] as f64 * f) as f32;
+    }
+
+    // ── 21. Headroom normalise (-1.5 dBFS) ───────
+    let mut peak: f64 = 1e-12;
+    for i in 0..final_l.len() {
+        peak = peak
+            .max((final_l[i] as f64).abs())
+            .max((final_r[i] as f64).abs());
+    }
+    let gain = 10.0_f64.powf(-1.5 / 20.0) / peak;
+    for i in 0..final_l.len() {
+        final_l[i] = (final_l[i] as f64 * gain) as f32;
+        final_r[i] = (final_r[i] as f64 * gain) as f32;
+    }
+
+    // Return interleaved
+    let mut out = vec![0.0_f32; 2 * final_l.len()];
+    for i in 0..final_l.len() {
+        out[2 * i] = final_l[i];
+        out[2 * i + 1] = final_r[i];
+    }
+    out
+}
+
 // ────────────────────────────────────────────────
 // Tests (run with `cargo test`)
 // ────────────────────────────────────────────────
@@ -860,6 +987,64 @@ mod tests {
         let st: Vec<f32> = (0..n).map(|i| i as f32 / 44100.0).collect();
         let a = apply_stereo_binaural(&mix, &conv, &be, &breath, &sw, &st, 174.0, 44100.0, 4.0, 0.3, 0.15);
         let b = apply_stereo_binaural(&mix, &conv, &be, &breath, &sw, &st, 174.0, 44100.0, 4.0, 0.3, 0.15);
+        assert_eq!(a, b);
+    }
+
+    // ── finalize_stereo ──────────────────────────
+
+    #[test]
+    fn finalize_stereo_empty() {
+        let result = finalize_stereo(&[], &[], &[], &[], &[], 44100.0, 60.0);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn finalize_stereo_output_interleaved() {
+        let n = 44100; // 1 second
+        let l = vec![0.5_f32; n];
+        let r = vec![-0.5_f32; n];
+        let ptve = vec![1.0; n];
+        // Control-rate: 60 Hz for 1 second = 60 frames
+        let nc = 60;
+        let acs: Vec<f32> = (0..nc).map(|i| 0.5 * (1.0 - (i as f32 / (nc - 1) as f32))).collect();
+        let cp: Vec<f32> = (0..nc).map(|i| i as f32 / (nc - 1) as f32).collect();
+        let result = finalize_stereo(&l, &r, &ptve, &acs, &cp, 44100.0, 60.0);
+        // Output should be interleaved, length = 2 * outLen
+        assert!(result.len() > 0);
+        assert_eq!(result.len() % 2, 0);
+    }
+
+    #[test]
+    fn finalize_stereo_normalised_peak() {
+        let n = 44100;
+        let l: Vec<f32> = (0..n).map(|i| 0.8 * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / 44100.0).sin()).collect();
+        let r = l.clone();
+        let ptve = vec![1.0; n];
+        let nc = 60;
+        let acs = vec![0.5_f32; nc];
+        let cp: Vec<f32> = (0..nc).map(|i| i as f32 / (nc - 1) as f32).collect();
+        let result = finalize_stereo(&l, &r, &ptve, &acs, &cp, 44100.0, 60.0);
+        let out_len = result.len() / 2;
+        // Peak should be approximately 10^(-1.5/20) ~ 0.841
+        let mut peak: f32 = 0.0;
+        for i in 0..out_len {
+            peak = peak.max(result[2 * i].abs()).max(result[2 * i + 1].abs());
+        }
+        let target = 10.0_f32.powf(-1.5 / 20.0);
+        assert!((peak - target).abs() < 0.01, "peak {} should be near {}", peak, target);
+    }
+
+    #[test]
+    fn finalize_stereo_deterministic() {
+        let n = 4410;
+        let l = vec![0.3_f32; n];
+        let r = vec![-0.3_f32; n];
+        let ptve = vec![1.0; n];
+        let nc = 60;
+        let acs = vec![0.5_f32; nc];
+        let cp: Vec<f32> = (0..nc).map(|i| i as f32 / (nc - 1) as f32).collect();
+        let a = finalize_stereo(&l, &r, &ptve, &acs, &cp, 44100.0, 60.0);
+        let b = finalize_stereo(&l, &r, &ptve, &acs, &cp, 44100.0, 60.0);
         assert_eq!(a, b);
     }
 }
