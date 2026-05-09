@@ -16,4 +16,8 @@ wasm-pack build \
   --release \
   --no-typescript
 
+# wasm-pack generates a .gitignore containing "*" which prevents
+# git from tracking the pkg files. Remove it so Vercel can access them.
+rm -f pkg/.gitignore
+
 echo "Build complete - output in crate/pkg/"

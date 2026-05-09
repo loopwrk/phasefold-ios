@@ -1,0 +1,14 @@
+{
+  "name": "phasefold-dsp",
+  "type": "module",
+  "description": "Phasefold DSP engine - Wasm build for browser audio synthesis",
+  "version": "0.1.0",
+  "files": [
+    "phasefold_dsp_bg.wasm",
+    "phasefold_dsp.js"
+  ],
+  "main": "phasefold_dsp.js",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
