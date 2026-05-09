@@ -1,5 +1,5 @@
 /** Type declarations for the wasm-pack generated module (built with --no-typescript). */
-declare module '../../../crate/pkg/phasefold_dsp.js' {
+declare module '*phasefold_dsp.js' {
   export default function init(): Promise<void>
 
   export function smooth_envelope(
