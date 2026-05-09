@@ -569,6 +569,117 @@ export function setApplyStereoBinauralImpl(impl: ApplyStereoBinauralFn): void {
 }
 
 // ────────────────────────────────────────────────
+// Post-processing (fade, collapse detect, normalise)
+// ────────────────────────────────────────────────
+
+export type FinalizeStereoFn = (
+  left: Float32Array,
+  right: Float32Array,
+  pureToneVolEnv: Float32Array,
+  activityCtrlSmooth: Float32Array,
+  ctrlProgress: Float32Array,
+  sampleRate: number,
+  controlHz: number,
+) => { left: Float32Array; right: Float32Array };
+
+function finalizeStereoTS(
+  left: Float32Array,
+  right: Float32Array,
+  pureToneVolEnv: Float32Array,
+  activityCtrlSmooth: Float32Array,
+  ctrlProgress: Float32Array,
+  sampleRate: number,
+  controlHz: number,
+): { left: Float32Array; right: Float32Array } {
+  const N = left.length;
+  if (N === 0) return { left: new Float32Array(0), right: new Float32Array(0) };
+
+  const L = Float32Array.from(left);
+  const R = Float32Array.from(right);
+
+  // 17. Fade in (0.5 s)
+  const fadeInSamps = Math.floor(0.5 * sampleRate);
+  for (let i = 0; i < fadeInSamps && i < N; i++) {
+    const f = i / (fadeInSamps - 1 || 1);
+    L[i] *= f;
+    R[i] *= f;
+  }
+
+  // Pure tone volume envelope
+  for (let i = 0; i < N; i++) {
+    L[i] *= pureToneVolEnv[i];
+    R[i] *= pureToneVolEnv[i];
+  }
+
+  // 18. Collapse detection
+  const Nc = activityCtrlSmooth.length;
+
+  const dCtrl = new Float32Array(Nc);
+  for (let i = 1; i < Nc; i++) {
+    dCtrl[i] = Math.abs(activityCtrlSmooth[i] - activityCtrlSmooth[i - 1]) * controlHz;
+  }
+  const dCtrlSmooth = smoothEnvelope(dCtrl, 0.5, controlHz);
+
+  const eps = 1e-3;
+  const quietSecs = 21.0;
+  const quietSteps = Math.max(1, Math.round(quietSecs * controlHz));
+
+  let lastActive = -1;
+  for (let i = 0; i < Nc; i++) {
+    if (dCtrlSmooth[i] > eps) lastActive = i;
+  }
+
+  const stopCtrlIdx = lastActive >= 0 ? Math.min(Nc - 1, lastActive + quietSteps) : Nc - 1;
+  const stopT = ctrlProgress[stopCtrlIdx];
+  const stopIdx = Math.max(1, Math.min(Math.round(stopT * N), N));
+
+  // 19. Decide final length
+  const minLength = Math.floor(0.85 * N);
+  const outLen = stopIdx < minLength ? N : stopIdx;
+
+  const finalL = new Float32Array(outLen);
+  const finalR = new Float32Array(outLen);
+  finalL.set(L.subarray(0, outLen));
+  finalR.set(R.subarray(0, outLen));
+
+  // 20. Fade out (equal-power, 1 s)
+  const fadeOutSamps = Math.max(1, Math.min(Math.round(1.0 * sampleRate), finalL.length));
+  for (let i = 0; i < fadeOutSamps; i++) {
+    const f = Math.cos((0.5 * Math.PI * i) / (fadeOutSamps - 1 || 1));
+    const idx = finalL.length - fadeOutSamps + i;
+    finalL[idx] *= f;
+    finalR[idx] *= f;
+  }
+
+  // 21. Headroom normalise (-1.5 dBFS)
+  let peak = 1e-12;
+  for (let i = 0; i < finalL.length; i++) {
+    peak = Math.max(peak, Math.abs(finalL[i]), Math.abs(finalR[i]));
+  }
+  const gain = Math.pow(10, -1.5 / 20) / peak;
+  for (let i = 0; i < finalL.length; i++) {
+    finalL[i] *= gain;
+    finalR[i] *= gain;
+  }
+
+  return { left: finalL, right: finalR };
+}
+
+let finalizeStereoImpl: FinalizeStereoFn = finalizeStereoTS;
+
+export function finalizeStereo(
+  left: Float32Array, right: Float32Array, pureToneVolEnv: Float32Array,
+  activityCtrlSmooth: Float32Array, ctrlProgress: Float32Array,
+  sampleRate: number, controlHz: number,
+): { left: Float32Array; right: Float32Array } {
+  return finalizeStereoImpl(left, right, pureToneVolEnv, activityCtrlSmooth, ctrlProgress, sampleRate, controlHz);
+}
+
+export function setFinalizeStereoImpl(impl: FinalizeStereoFn): void {
+  finalizeStereoImpl = impl;
+}
+
+// ────────────────────────────────────────────────
 // Note naming
 // ────────────────────────────────────────────────
 

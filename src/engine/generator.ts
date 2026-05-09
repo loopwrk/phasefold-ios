@@ -28,6 +28,7 @@ import {
   mixLayers,
   applyBaseToneAndHarmonics,
   applyStereoBinaural,
+  finalizeStereo,
 } from "./dsp";
 
 const TWO_PI = 2 * Math.PI;
@@ -333,84 +334,12 @@ export function generateAudio(
 
   onProgress?.(88, "Stereo + binaural");
 
-  // ── 17. Fade in (0.5 s) ──────────────────────
-  const fadeInSamps = Math.floor(0.5 * sampleRate);
-  for (let i = 0; i < fadeInSamps && i < N; i++) {
-    const f = i / (fadeInSamps - 1 || 1);
-    L[i] *= f;
-    R[i] *= f;
-  }
-
-  // Pure tone volume envelope
-  for (let i = 0; i < N; i++) {
-    L[i] *= pureToneVolEnv[i];
-    R[i] *= pureToneVolEnv[i];
-  }
-
-  // ── 18. Collapse detection ────────────────────
-  // Measure control-rate d/dt of the activity envelope
-  const dCtrl = new Float32Array(Nc);
-  for (let i = 1; i < Nc; i++) {
-    dCtrl[i] =
-      Math.abs(activityCtrlSmooth[i] - activityCtrlSmooth[i - 1]) * CONTROL_HZ;
-  }
-  const dCtrlSmooth = smoothEnvelope(dCtrl, 0.5, CONTROL_HZ);
-
-  const eps = 1e-3;
-  const quietSecs = 21.0;
-  const quietSteps = Math.max(1, Math.round(quietSecs * CONTROL_HZ));
-
-  let lastActive = -1;
-  for (let i = 0; i < Nc; i++) {
-    if (dCtrlSmooth[i] > eps) lastActive = i;
-  }
-
-  const stopCtrlIdx =
-    lastActive >= 0 ? Math.min(Nc - 1, lastActive + quietSteps) : Nc - 1;
-
-  const stopT = ctrlProgress[stopCtrlIdx];
-  let stopIdx = Math.max(1, Math.min(Math.round(stopT * N), N));
-
-  // ── 19. Decide final length ───────────────────
-  // If collapse detection wants to trim more than 15 % off the
-  // requested duration, honour the user's duration instead.
-  // The state evolution often converges early while the musical
-  // envelopes (convergence gain, voice emergence, breath) are
-  // still doing their job — so we only trust the detector when
-  // it agrees the piece is nearly done anyway.
-  const minLength = Math.floor(0.85 * N);
-  const useFullLength = stopIdx < minLength;
-  const outLen = useFullLength ? N : stopIdx;
-
-  const finalL = new Float32Array(outLen);
-  const finalR = new Float32Array(outLen);
-  finalL.set(L.subarray(0, outLen));
-  finalR.set(R.subarray(0, outLen));
-
-  onProgress?.(95, "Collapse detection");
-
-  // ── 20. Fade out (equal-power, 1 s) ──────────
-  const fadeOutSamps = Math.max(
-    1,
-    Math.min(Math.round(1.0 * sampleRate), finalL.length),
+  // ── 17-21. Finalize (fade, collapse detect, normalise) ──
+  const { left: finalL, right: finalR } = finalizeStereo(
+    L, R, pureToneVolEnv,
+    activityCtrlSmooth, ctrlProgress,
+    sampleRate, CONTROL_HZ,
   );
-  for (let i = 0; i < fadeOutSamps; i++) {
-    const f = Math.cos((0.5 * Math.PI * i) / (fadeOutSamps - 1 || 1));
-    const idx = finalL.length - fadeOutSamps + i;
-    finalL[idx] *= f;
-    finalR[idx] *= f;
-  }
-
-  // ── 21. Headroom normalise (−1.5 dBFS) ───────
-  let peak = 1e-12;
-  for (let i = 0; i < finalL.length; i++) {
-    peak = Math.max(peak, Math.abs(finalL[i]), Math.abs(finalR[i]));
-  }
-  const gain = Math.pow(10, -1.5 / 20) / peak;
-  for (let i = 0; i < finalL.length; i++) {
-    finalL[i] *= gain;
-    finalR[i] *= gain;
-  }
 
   onProgress?.(100, "Complete");
 

@@ -27,6 +27,7 @@ import wasmInit, {
   mix_layers as wasmMixLayers,
   apply_base_tone_and_harmonics as wasmApplyBaseToneAndHarmonics,
   apply_stereo_binaural as wasmApplyStereoBinaural,
+  finalize_stereo as wasmFinalizeStereo,
   SeededRNG as WasmSeededRNG,
 } from '../../../crate/pkg/phasefold_dsp.js'
 
@@ -217,6 +218,35 @@ export function applyStereoBinaural(
     right[i] = interleaved[2 * i + 1]
   }
   return { left, right }
+}
+
+/**
+ * Post-processing pipeline (sections 17-21) - Rust/Wasm implementation.
+ * Returns { left, right, sampleRate } matching StereoAudio.
+ */
+export function finalizeStereo(
+  left: Float32Array,
+  right: Float32Array,
+  pureToneVolEnv: Float32Array,
+  activityCtrlSmooth: Float32Array,
+  ctrlProgress: Float32Array,
+  sampleRate: number,
+  controlHz: number,
+): { left: Float32Array; right: Float32Array } {
+  const raw = wasmFinalizeStereo(
+    left, right, pureToneVolEnv,
+    activityCtrlSmooth, ctrlProgress,
+    sampleRate, controlHz,
+  )
+  const interleaved = raw instanceof Float32Array ? raw : new Float32Array(raw)
+  const outLen = interleaved.length / 2
+  const outL = new Float32Array(outLen)
+  const outR = new Float32Array(outLen)
+  for (let i = 0; i < outLen; i++) {
+    outL[i] = interleaved[2 * i]
+    outR[i] = interleaved[2 * i + 1]
+  }
+  return { left: outL, right: outR }
 }
 
 /**

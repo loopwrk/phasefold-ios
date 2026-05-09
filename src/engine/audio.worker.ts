@@ -22,6 +22,7 @@ worker.onmessage = (e: MessageEvent<WorkerRequest>) => {
   if (type !== "generate") return;
 
   try {
+    const t0 = performance.now();
     const audio = generateAudio(params, (percent, section) => {
       // Progress reports - dev console only
       if (import.meta.env.DEV) {
@@ -31,6 +32,8 @@ worker.onmessage = (e: MessageEvent<WorkerRequest>) => {
       const msg: WorkerResponse = { type: "progress", percent, section };
       worker.postMessage(msg);
     });
+    const dt = performance.now() - t0;
+    console.log(`[phasefold worker] generated ${(audio.left.length / audio.sampleRate).toFixed(1)}s audio in ${dt.toFixed(0)}ms (TypeScript)`);
 
     // Transfer the underlying ArrayBuffers (zero-copy)
     const msg: WorkerResponse = {

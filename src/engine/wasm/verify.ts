@@ -18,6 +18,7 @@ import {
   mixLayers as tsMixLayers,
   applyBaseToneAndHarmonics as tsApplyBaseToneAndHarmonics,
   applyStereoBinaural as tsApplyStereoBinaural,
+  finalizeStereo as tsFinalizeStereo,
   SeededRNG as TSSeededRNG,
 } from '../dsp'
 import {
@@ -31,6 +32,7 @@ import {
   mixLayers as wasmMixLayers,
   applyBaseToneAndHarmonics as wasmApplyBaseToneAndHarmonics,
   applyStereoBinaural as wasmApplyStereoBinaural,
+  finalizeStereo as wasmFinalizeStereo,
   SeededRNG as WasmSeededRNG,
 } from './dsp'
 
@@ -544,6 +546,61 @@ export async function verify(): Promise<void> {
       tsApplyStereoBinaural(empty, empty, empty, empty, empty, empty, 174.0, 44100, 4.0, 0.3, 0.15),
       wasmApplyStereoBinaural(empty, empty, empty, empty, empty, empty, 174.0, 44100, 4.0, 0.3, 0.15),
     )
+  }
+
+  // ── finalizeStereo tests ──────────────────────
+
+  console.log('\n── finalizeStereo ──')
+
+  // Realistic 1-second signal
+  {
+    const N = 44100
+    const sr = 44100
+    const Nc = 60
+    const l = Float32Array.from({ length: N }, (_, i) => 0.5 * Math.sin(2 * Math.PI * 174 * (i / sr)))
+    const r = Float32Array.from({ length: N }, (_, i) => 0.5 * Math.cos(2 * Math.PI * 174 * (i / sr)))
+    const ptve = new Float32Array(N).fill(1.0)
+    const acs = Float32Array.from({ length: Nc }, (_, i) => 0.5 * (1 - i / (Nc - 1)))
+    const cp = Float32Array.from({ length: Nc }, (_, i) => i / (Nc - 1))
+    const tsResult = tsFinalizeStereo(l, r, ptve, acs, cp, sr, 60)
+    const wasmResult = wasmFinalizeStereo(l, r, ptve, acs, cp, sr, 60)
+    // Output lengths must match
+    const lenMatch = tsResult.left.length === wasmResult.left.length
+    if (!lenMatch) {
+      console.log(`[FAIL] finalizeStereo - length mismatch: TS=${tsResult.left.length}, Wasm=${wasmResult.left.length}`)
+      allPassed = false
+    } else {
+      runStereoTest('finalizeStereo - realistic (1s @ 44.1kHz)', tsResult, wasmResult)
+    }
+  }
+
+  // Constant activity (no collapse trimming)
+  {
+    const N = 4410
+    const sr = 44100
+    const Nc = 60
+    const l = Float32Array.from({ length: N }, (_, i) => 0.3 * Math.sin(2 * Math.PI * 440 * (i / sr)))
+    const r = Float32Array.from(l)
+    const ptve = new Float32Array(N).fill(1.0)
+    // Constant high activity = always active = no trimming
+    const acs = new Float32Array(Nc).fill(0.8)
+    const cp = Float32Array.from({ length: Nc }, (_, i) => i / (Nc - 1))
+    const tsResult = tsFinalizeStereo(l, r, ptve, acs, cp, sr, 60)
+    const wasmResult = wasmFinalizeStereo(l, r, ptve, acs, cp, sr, 60)
+    const lenMatch = tsResult.left.length === wasmResult.left.length
+    if (!lenMatch) {
+      console.log(`[FAIL] finalizeStereo constant - length mismatch: TS=${tsResult.left.length}, Wasm=${wasmResult.left.length}`)
+      allPassed = false
+    } else {
+      runStereoTest('finalizeStereo - constant activity (no trim)', tsResult, wasmResult)
+    }
+  }
+
+  // Empty
+  {
+    const tsResult = tsFinalizeStereo(new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), 44100, 60)
+    const wasmResult = wasmFinalizeStereo(new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), new Float32Array(0), 44100, 60)
+    runStereoTest('finalizeStereo - empty', tsResult, wasmResult)
   }
 
   console.log(

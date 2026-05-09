@@ -18,6 +18,7 @@ import {
   setMixLayersImpl,
   setApplyBaseToneAndHarmonicsImpl,
   setApplyStereoBinauralImpl,
+  setFinalizeStereoImpl,
 } from './dsp'
 import {
   initWasm,
@@ -30,6 +31,7 @@ import {
   mixLayers as wasmMixLayers,
   applyBaseToneAndHarmonics as wasmApplyBaseToneAndHarmonics,
   applyStereoBinaural as wasmApplyStereoBinaural,
+  finalizeStereo as wasmFinalizeStereo,
   SeededRNG as WasmSeededRNG,
 } from './wasm/dsp'
 import type { WorkerRequest, WorkerResponse } from './types'
@@ -58,10 +60,12 @@ worker.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       setMixLayersImpl(wasmMixLayers)
       setApplyBaseToneAndHarmonicsImpl(wasmApplyBaseToneAndHarmonics)
       setApplyStereoBinauralImpl(wasmApplyStereoBinaural)
+      setFinalizeStereoImpl(wasmFinalizeStereo)
       wasmReady = true
       console.log('[phasefold rust-worker] Wasm initialised, all DSP functions swapped')
     }
 
+    const t0 = performance.now()
     const audio = generateAudio(params, (percent, section) => {
       if (import.meta.env.DEV) {
         console.log(`[phasefold rust-worker] ${percent}% - ${section}`)
@@ -70,6 +74,8 @@ worker.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       const msg: WorkerResponse = { type: 'progress', percent, section }
       worker.postMessage(msg)
     })
+    const dt = performance.now() - t0
+    console.log(`[phasefold rust-worker] generated ${(audio.left.length / audio.sampleRate).toFixed(1)}s audio in ${dt.toFixed(0)}ms (Rust/Wasm)`)
 
     const msg: WorkerResponse = {
       type: 'result',
