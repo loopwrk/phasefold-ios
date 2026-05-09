@@ -11,7 +11,7 @@
   },
   "onboarding": {
     "welcomeTo": "Welcome to",
-    "appName": "Soneuro",
+    "appName": "Soneuro (Rust port)",
     "intentQuestion": "What can {appName} help you with today?",
     "intents": {
       "focus": "Increase focus",
