@@ -1,7 +1,7 @@
 <template>
   <div class="playback">
     <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName')
-    }}</router-link>
+      }}</router-link>
 
     <div class="playback-content">
       <!-- Progress ring / playing state -->
@@ -20,7 +20,12 @@
       </div>
 
       <p class="playback-label">
-        {{ isGenerating ? t('playback.generatingProgress', { progress: generationProgress }) : t('playback.playing') }}
+        <template v-if="isGenerating">
+          {{ t('playback.generatingProgress', { progress: generationProgress }) }}
+        </template>
+        <Transition v-else name="phase-fade" mode="out-in">
+          <span :key="currentPhaseLabel">{{ currentPhaseLabel }}</span>
+        </Transition>
       </p>
       <p class="playback-preset-name">{{ displayName }}</p>
     </div>
@@ -78,6 +83,7 @@ const {
   generationProgress,
   currentAudio,
   playbackTime,
+  getDuration,
 } = useAudioEngine()
 
 // Preset key passed via route param
@@ -87,6 +93,35 @@ const hasAudio = computed(() => currentAudio.value !== null)
 
 // Progress ring geometry
 const circumference = 2 * Math.PI * 52
+
+// Phase labels that reflect the algorithm's therapeutic arc.
+// Thresholds are proportional to the voiceDelay / total duration
+// ratio and the collapse curve's activity envelope.
+const PHASE_LABELS = [
+  'Settling in...',
+  'Opening up...',
+  'Deepening...',
+  'Converging...',
+  'Unifying...',
+] as const
+
+const currentPhaseLabel = computed(() => {
+  if (!hasAudio.value) return ''
+  const duration = getDuration()
+  if (duration <= 0) return ''
+
+  const t = playbackTime.value / duration
+
+  // Voice delay is ~8% of duration (see buildParams), so the
+  // pure-tone intro occupies roughly the first 8%.
+  // The collapse curve drives activity from ~8% up, peaks around
+  // 30-50%, then descends. Final ~5% is the tail fade.
+  if (t < 0.08) return PHASE_LABELS[0]      // settling in (voice delay / pure tone)
+  if (t < 0.30) return PHASE_LABELS[1]      // opening (activity rising)
+  if (t < 0.65) return PHASE_LABELS[2]      // deepening (peak complexity)
+  if (t < 0.92) return PHASE_LABELS[3]      // converging (collapse descent)
+  return PHASE_LABELS[4]                     // emerging (tail / fade)
+})
 
 function buildParams(key: string): SynthParams {
   const p = PRESETS[key]
@@ -232,5 +267,16 @@ onUnmounted(() => {
 
 .playback-nav {
   margin-top: 10px;
+}
+
+/* Phase label fade transition */
+.phase-fade-enter-active,
+.phase-fade-leave-active {
+  transition: opacity 0.6s ease;
+}
+
+.phase-fade-enter-from,
+.phase-fade-leave-to {
+  opacity: 0;
 }
 </style>
