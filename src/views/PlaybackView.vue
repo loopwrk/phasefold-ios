@@ -1,7 +1,7 @@
 <template>
   <div class="playback">
     <router-link :to="{ name: 'onboarding', query: { step: '1' } }" class="logo">{{ t('onboarding.appName')
-      }}</router-link>
+    }}</router-link>
 
     <div class="playback-content">
       <!-- Progress ring / playing state -->
@@ -176,7 +176,8 @@ function onPlayPause() {
   if (isPlaying.value) {
     stopAudio()
   } else {
-    playAudio(playbackTime.value)
+    const startFrom = isFinished.value ? 0 : playbackTime.value
+    playAudio(startFrom)
   }
 }
 
@@ -314,5 +315,4 @@ onUnmounted(() => {
 .phase-fade-leave-to {
   opacity: 0;
 }
-
 </style>
