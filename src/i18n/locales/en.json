@@ -34,7 +34,7 @@
       "page1": {
         "breathe": "Take a long, slow breath in through your nose, filling the lungs completely. Hold it for a few seconds, and then let it out through your mouth with a soft sigh. Do this 3-5 times",
         "release": "Then, let go of any control over the breath. Allow the body to breathe naturally.",
-        "cta": "Now, let's begin"
+        "cta": "Let's begin"
       }
     },
     "anxiety": {
@@ -46,9 +46,9 @@
         "cta": "Ready? Let's continue"
       },
       "page1": {
-        "arc": "The audio is designed to start with more texture and movement. Over time, it gradually softens, guiding you towards stillness.",
+        "arc": "The audio is designed to meet you where you are. At the start, it will sound busy. Over time, it gradually softens, guiding you towards stillness.",
         "permission": "There's nothing you need to do - just listen. If at any point the sound feels like too much, it's completely okay to take a break or stop.",
-        "cta": "Now, let's begin"
+        "cta": "Let's begin"
       }
     },
     "focus": {

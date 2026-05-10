@@ -6,7 +6,7 @@
 /* ── Body / guidance text ──────────────────── */
 
 .text-body {
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1.5;
   color: var(--cs-text);
   text-align: center;

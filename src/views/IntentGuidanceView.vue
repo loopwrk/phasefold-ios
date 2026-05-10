@@ -42,8 +42,8 @@
         <div class="preset-screen">
           <h2 class="preset-heading">{{ t('guidance.choosePreset') }}</h2>
           <div class="preset-list">
-            <PresetCard v-for="preset in intentPresets" :key="preset.key" :name="preset.displayName"
-              @play="selectPreset(preset.key)" />
+            <PresetCard v-for="preset in intentPresets" :key="preset.key" variant="expanded" :name="preset.displayName"
+              :mind-state="preset.mindState" :duration-seconds="preset.dur" @play="selectPreset(preset.key)" />
           </div>
         </div>
 
@@ -70,7 +70,7 @@ import { useI18n } from 'vue-i18n'
 import AppButton from '../components/Buttons/AppButton.vue'
 import AppIcon from '../components/Icons/AppIcon.vue'
 import PresetCard from '../components/Cards/PresetCard.vue'
-import { PRESETS, type Intent } from '../data/presets'
+import { PRESETS, type Intent, type MindState } from '../data/presets'
 import { warmup } from '../engine/audioContext'
 
 const { t, tm } = useI18n()
@@ -168,10 +168,13 @@ const intentPresets = computed(() => {
   const slug = intentSlug.value as Intent
   return Object.entries(PRESETS)
     .filter(([, preset]) => preset.intents.includes(slug))
-    .map(([key]) => ({
-      key,
-      displayName: key.replace(/\s*\([^)]+\)$/, ''),
-    }))
+    .map(([key, preset]) => {
+      const dashIdx = key.indexOf(' - ')
+      const mindState = dashIdx > 0 ? key.slice(0, dashIdx).toLowerCase() as MindState : 'delta' as MindState
+      const afterDash = dashIdx > 0 ? key.slice(dashIdx + 3) : key
+      const displayName = afterDash.replace(/\s*\([^)]+\)$/, '')
+      return { key, displayName, mindState, dur: preset.dur }
+    })
 })
 
 function selectPreset(presetKey: string) {

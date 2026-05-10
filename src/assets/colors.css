@@ -50,6 +50,9 @@
   /* Composed tokens */
   --cs-bg: oklch(var(--cs-bg-l) var(--cs-bg-c) var(--cs-bg-h));
   --cs-surf: oklch(var(--cs-surf-l) var(--cs-surf-c) var(--cs-surf-h));
+  --cs-surf-hover: oklch(
+    calc(var(--cs-surf-l) + 0.04) var(--cs-surf-c) var(--cs-surf-h)
+  );
   --cs-raised: oklch(var(--cs-raised-l) var(--cs-raised-c) var(--cs-raised-h));
   --cs-action: oklch(var(--cs-action-l) var(--cs-action-c) var(--cs-action-h));
   --cs-cntrst: oklch(var(--cs-cntrst-l) var(--cs-cntrst-c) var(--cs-cntrst-h));
@@ -69,7 +72,7 @@
     --cs-surf-h: 258;
 
     /* raised */
-    --cs-raised-l: 0.38;
+    --cs-raised-l: 0.78;
     --cs-raised-c: 0.05;
     --cs-raised-h: 260;
 

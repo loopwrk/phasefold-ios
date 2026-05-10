@@ -1,5 +1,20 @@
 export type Intent = "sleep" | "anxiety" | "focus";
 
+export type MindState = "delta" | "theta" | "alpha" | "beta" | "gamma";
+
+export interface MindStateInfo {
+  brief: string;
+  description: string;
+}
+
+export const MIND_STATE_INFO: Record<MindState, MindStateInfo> = {
+  delta: { brief: "Sleep", description: "Deep sleep" },
+  theta: { brief: "Meditation", description: "Inner stillness" },
+  alpha: { brief: "Relaxation", description: "Calm alertness" },
+  beta: { brief: "Focus", description: "Active focus" },
+  gamma: { brief: "Cognition", description: "Peak awareness" },
+};
+
 export interface PresetValues {
   dur: number;
   baseF0: number;
@@ -97,7 +112,7 @@ export const PRESETS: Record<string, PresetValues> = {
   // Low base frequency (G2) and rich odd harmonics produce a warm,
   // deep timbre; slow restorative breath and high layer count give
   // the sound a sustained, enveloping quality over 7.5 minutes.
-  "Alpha - The Slow Unravelling (Anxiety reduction)": {
+  "Alpha - Unravelling (Anxiety reduction)": {
     dur: 450,
     baseF0: 96.0,
     voices: 7,
@@ -143,6 +158,24 @@ export const PRESETS: Record<string, PresetValues> = {
     breathRate: 0.012, // Restorative
     binauralDeltaHz0: 14.0,
     binauralAmount: 0.22,
+    intents: ["focus"],
+  },
+
+  // 18 Hz: low-beta, the most replicated frequency for sustained attention.
+  // Lane et al. (1998, Physiology & Behavior) demonstrated that beta-frequency
+  // binaural beats significantly increased vigilance task performance and
+  // reduced negative mood. Garcia-Argibay et al. (2019, Psychological Research)
+  // meta-analysis of 22 studies confirmed beta-range (16-24 Hz) binaural beats
+  // produced significant effects on sustained attention and working memory.
+  // 18 Hz sits at the centre of this validated range.
+  "Beta - Steady State (Cognitive enhancement)": {
+    dur: 300,
+    baseF0: 105.81,
+    voices: 2,
+    layers: 2,
+    breathRate: 0.012, // Restorative
+    binauralDeltaHz0: 18.0,
+    binauralAmount: 0.25,
     intents: ["focus"],
   },
 
