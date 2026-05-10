@@ -7,27 +7,34 @@
       <!-- Progress ring / playing state -->
       <div class="ring-container">
         <svg class="progress-ring" viewBox="0 0 120 120">
+          <defs>
+            <!-- Clip to the inner edge of the ring so  grows inward -->
+            <clipPath id="ring-clip">
+              <circle cx="60" cy="60" r="55" />
+            </clipPath>
+          </defs>
           <!-- Background track -->
           <circle cx="60" cy="60" r="52" fill="none" stroke="var(--cs-raised)" stroke-width="6" />
           <!-- Progress arc during generation -->
           <circle v-if="isGenerating" cx="60" cy="60" r="52" fill="none" stroke="var(--cs-action)" stroke-width="6"
             stroke-linecap="round" :stroke-dasharray="circumference"
             :stroke-dashoffset="circumference - (circumference * generationProgress) / 100" class="progress-arc" />
-          <!-- Filled ring when audio is ready -->
+          <!-- Ring that fills inward: stroke-width grows from 6 to 104 (2*r),
+               clipped to the outer edge so it only expands inward -->
           <circle v-if="!isGenerating && hasAudio" cx="60" cy="60" r="52" fill="none" stroke="var(--cs-action)"
-            stroke-width="6" />
+            :stroke-width="fillStrokeWidth" clip-path="url(#ring-clip)" />
         </svg>
       </div>
 
-      <p class="playback-label">
-        <template v-if="isGenerating">
+      <Transition name="phase-fade" mode="out-in">
+        <p v-if="isGenerating" key="generating" class="playback-label">
           {{ t('playback.generatingProgress', { progress: generationProgress }) }}
-        </template>
-        <Transition v-else name="phase-fade" mode="out-in">
-          <span :key="currentPhaseLabel">{{ currentPhaseLabel }}</span>
-        </Transition>
-      </p>
-      <p class="playback-preset-name">{{ displayName }}</p>
+        </p>
+        <p v-else-if="!isFinished && currentPhaseLabel" :key="currentPhaseLabel" class="playback-label">
+          {{ currentPhaseLabel }}
+        </p>
+      </Transition>
+      <p :class="['playback-preset-name', { 'is-hidden': !showTitle }]">{{ displayName }}</p>
     </div>
 
     <div class="playback-bar">
@@ -88,11 +95,34 @@ const {
 
 // Preset key passed via route param
 const presetKey = computed(() => decodeURIComponent(route.params.preset as string))
-const displayName = computed(() => presetKey.value.replace(/\s*\([^)]+\)$/, ''))
+const displayName = computed(() => {
+  const key = presetKey.value
+  const dashIdx = key.indexOf(' - ')
+  const afterDash = dashIdx > 0 ? key.slice(dashIdx + 3) : key
+  return afterDash.replace(/\s*\([^)]+\)$/, '')
+})
 const hasAudio = computed(() => currentAudio.value !== null)
+const showTitle = computed(() => !hasAudio.value)
+const isFinished = computed(() => {
+  if (!hasAudio.value) return false
+  const duration = getDuration()
+  return duration > 0 && playbackTime.value >= duration && !isPlaying.value
+})
 
 // Progress ring geometry
 const circumference = 2 * Math.PI * 52
+
+// Progress fill: the ring circle's stroke-width grows from 6 (outline only)
+// to 104 (2 * r=52, filling the entire interior). A clipPath at r=55 keeps
+// the outer edge crisp so the stroke only expands inward.
+const fillStrokeWidth = computed(() => {
+  const duration = getDuration()
+  if (duration <= 0) return 6
+  const progress = Math.min(playbackTime.value / duration, 1)
+  // Area-preserving curve: annular area = pi*(R² - r²), so equal
+  // time should fill equal area.
+  return 6 + (1 - Math.sqrt(1 - progress)) * 98  // 6 -> 104
+})
 
 // Phase labels that reflect the algorithm's therapeutic arc.
 // Thresholds are proportional to the voiceDelay / total duration
@@ -248,6 +278,11 @@ onUnmounted(() => {
   font-size: 14px;
   color: var(--cs-text);
   text-align: center;
+  transition: opacity 0.6s ease;
+}
+
+.playback-preset-name.is-hidden {
+  opacity: 0;
 }
 
 .playback-bar {
@@ -279,4 +314,5 @@ onUnmounted(() => {
 .phase-fade-leave-to {
   opacity: 0;
 }
+
 </style>
