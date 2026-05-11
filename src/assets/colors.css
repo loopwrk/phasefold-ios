@@ -23,17 +23,17 @@
   --cs-bg-h: 275;
 
   /* surf: card / panel surfaces */
-  --cs-surf-l: 0.85;
-  --cs-surf-c: 0.04;
+  --cs-surf-l: 0.87;
+  --cs-surf-c: 0.05;
   --cs-surf-h: 272;
 
   /* raised: elevated elements, borders */
-  --cs-raised-l: 0.72;
+  --cs-raised-l: 0.42;
   --cs-raised-c: 0.06;
   --cs-raised-h: 270;
 
   /* action: interactive accent */
-  --cs-action-l: 0.68;
+  --cs-action-l: 0.6;
   --cs-action-c: 0.12;
   --cs-action-h: 255;
 
