@@ -1,10 +1,10 @@
 # Soneuro
 
-Soneuro (working title, part of the PhaseFold family of apps) is a generative therapeutic audio synthesiser optimised to sit amongst apps like Calm, Headspace and Insight Timer, rather than electronic musicians. Soneuro creates unique, evolving soundscapes in real time using pure mathematical synthesis - no samples, no loops, no AI. Each session implements the iso principle from music therapy, guiding the listener from stimulation through relaxation to deep rest via a unified convergence architecture.
+Soneuro (working title, part of the PhaseFold family of apps) is a generative therapeutic audio synthesiser optimised to sit amongst apps like Calm, Headspace and Insight Timer. Informed by the iso-principle from music therapy, and inspired natural physical phenomena such as wave dynamics, Soneuro creates unique, evolving soundscapesin real time using pure mathematical synthesis including oscillating binaural beats - no samples, no loops, no AI. Each session guides the listener from stimulation through relaxation to deep rest via a unified convergence architecture.
 
 The interface guides the user to the an appropriate preset which is suitable for their needs, whilst allowing for optional full customisation.
 
-Currently optimised as a web app, wrapped in Capacitor for later deployment as an iOS app. Note: the engine can run slowly on older devices and certain mobile hardware, optimisation is planned for future releases.
+Currently optimised as a mobile-first web app, wrapped in Capacitor for later deployment as an iOS app. Note: the engine can run slowly on older devices and certain mobile hardware, optimisation is planned for future releases.
 
 ![Vue](https://img.shields.io/badge/Vue-3.x-4FC08D?logo=vue.js) ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript) ![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite) ![Capacitor](https://img.shields.io/badge/Capacitor-iOS-119EFF?logo=capacitor) ![Web Audio API](https://img.shields.io/badge/Web_Audio_API-44.1kHz-FF6600)
 
@@ -62,7 +62,7 @@ Sessions are deterministic: the same preset and seed always produce identical au
 ## TODO
 
 - Add more details to listed presets on the preset pages such as duration and frequency range
-- Refactor frontend of 'custom' page
+- Refactor and update UI of 'custom' page
 - Optimise the audio engine by either rewriting it in Rust (or C) for WebAssembly or offloading it to a highly performent server
 - Rewrite the frontend in Flutter for Native iOS
 - Optimise colours for accessibility
