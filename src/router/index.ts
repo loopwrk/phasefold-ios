@@ -37,6 +37,12 @@ const router = createRouter({
       name: "about",
       component: () => import("../views/AboutView.vue"),
     },
+    {
+      // Dev benchmark harness: unlinked from the app UI
+      path: "/bench",
+      name: "bench",
+      component: () => import("../views/BenchView.vue"),
+    },
   ],
 });
 

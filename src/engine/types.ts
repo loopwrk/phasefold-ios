@@ -38,6 +38,13 @@ export interface StereoAudio {
 export const AUDIO_SR = 44100;
 export const CONTROL_HZ = 60.0;
 
+/* Engine version: part of the reproducibility contract. The same
+ * (engineVersion, params, seed) triple always produces bit-identical
+ * audio on a given device. Bump whenever a change alters generated
+ * output for identical inputs - e.g. v2 was the fused block engine
+ * rewrite (sine table oscillators, block-interpolated envelopes). */
+export const ENGINE_VERSION = 2;
+
 // ── Web Worker message protocol ────────────────
 
 export type WorkerRequest = {
@@ -46,11 +53,12 @@ export type WorkerRequest = {
 };
 
 export type WorkerResponse =
-  | { type: "progress"; percent: number; section: string }
+  | { type: "progress"; percent: number; section: string; elapsedMs?: number }
   | {
       type: "result";
       left: Float32Array;
       right: Float32Array;
       sampleRate: number;
+      elapsedMs?: number;
     }
   | { type: "error"; message: string };

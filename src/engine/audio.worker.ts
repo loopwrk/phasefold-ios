@@ -22,13 +22,23 @@ worker.onmessage = (e: MessageEvent<WorkerRequest>) => {
   if (type !== "generate") return;
 
   try {
+    // Wall-clock start inside the worker: progress/result messages carry
+    // elapsedMs so the benchmark page can compute per-section timings
+    // without cross-thread clock skew.
+    const t0 = performance.now();
+
     const audio = generateAudio(params, (percent, section) => {
       // Progress reports - dev console only
       if (import.meta.env.DEV) {
         console.log(`[phasefold worker] ${percent}% - ${section}`);
       }
 
-      const msg: WorkerResponse = { type: "progress", percent, section };
+      const msg: WorkerResponse = {
+        type: "progress",
+        percent,
+        section,
+        elapsedMs: performance.now() - t0,
+      };
       worker.postMessage(msg);
     });
 
@@ -38,6 +48,7 @@ worker.onmessage = (e: MessageEvent<WorkerRequest>) => {
       left: audio.left,
       right: audio.right,
       sampleRate: audio.sampleRate,
+      elapsedMs: performance.now() - t0,
     };
     worker.postMessage(msg, [audio.left.buffer, audio.right.buffer]);
   } catch (err: unknown) {
