@@ -20,6 +20,13 @@ export interface SynthParams {
   overtonePower: number; // harmonic decay exponent
   voiceDelay: number; // seconds before voices emerge
   breathRate: number; // Hz — stereo breath oscillation
+
+  // Dev-only feature toggles (default to true / enabled)
+  enableStereoWidthLfo?: boolean;
+  enableHaasDelay?: boolean;
+  enableStateEvolution?: boolean;
+  enableFm?: boolean;
+  enableDetuneConvergence?: boolean;
 }
 
 export interface StereoAudio {

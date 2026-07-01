@@ -1,16 +1,12 @@
 /**
  * Phasefold — Core audio generator
  *
- * Port of the Python generate_app() function.
- * Every section is annotated with the corresponding Python comment
- *
  * Computation is synchronous but designed to run inside a Web Worker
  * so the main thread stays responsive.
  *
- * All buffers use Float32 for memory efficiency (halves allocation vs
- * Float64) and faster ARM performance on iOS. Phase accumulators
- * (phaseCum, cumMod, basePhaseAcc, binLPhase, binRPhase) remain as
- * regular JS numbers (Float64) to avoid audible drift over long tracks.
+ * All buffers use Float32 for memory efficiency and faster ARM performance
+ * on iOS. Phase accumulators (phaseCum, cumMod, basePhaseAcc, binLPhase, binRPhase)
+ * remain as regular JS numbers (Float64) to avoid audible drift over long tracks.
  */
 
 export type ProgressCallback = (percent: number, section: string) => void;
@@ -32,6 +28,8 @@ export function generateAudio(
   params: SynthParams,
   onProgress?: ProgressCallback,
 ): StereoAudio {
+  const t0 = performance.now();
+
   const {
     dur,
     sampleRate,
@@ -46,18 +44,47 @@ export function generateAudio(
     overtonePower,
     voiceDelay,
     breathRate,
+    enableStereoWidthLfo = true,
+    enableHaasDelay = true,
+    enableStateEvolution = true,
+    enableFm = true,
+    enableDetuneConvergence = true,
   } = params;
 
   // ── 1. Collapse curve (duration-adaptive) ─────
-  // Computed from session duration using a log-scaled formula calibrated
-  // to research-backed ranges (see collapse-curve-rationale.docx):
+  // Computed from session duration using a log-scaled formula.
+  // The collapse curve controls how Phasefold's audio parameters converge
+  // over the duration of a session. Short sessions need to settle fairly
+  // quickly, otherwise you'd barely notice the change before the session ends.
+  // Long sessions need to to converge slowly before easing into stillness.
+  //
+  // 0 = session has started; 1 = session has finished. Halfway = 0.5.
+  //
+  // Converging to stillness means reducing the strength of every evolving
+  // element in the sound. The collapse curve - convGain at audio rate, plus its
+  // control-rate counterpart convGainCtrl - multiplies all of the following:
+  // • frequency detuning (the per-voice cents spread; voices converge to unison)
+  // • FM modulation depth (slow drifting changes in pitch)
+  // • AM modulation depth (slow changes in volume)
+  // • The base-tone level trim (a slight ducking of the anchor tone while the
+  //   emergent layers are present, which lifts back as the track settles)
+  // • Binaural beat delta (the L/R frequency split) and its level in the mix
+  // • Breath modulation (the inhale/exhale swell pulsing through the sound)
+  // • The slow inter-layer drift (the shared phase drift that keeps the layers
+  //   moving against one another)
+  // • Harmonic / overtone enrichment (the added even/odd Chebyshev harmonics
+  //   that brighten the timbre, via convGain^overtonePower)
+  // • Breath-driven stereo panning (the left/right sway, which settles to centre)
+  // • Stereo width / Haas spatialisation (the widening delay, which narrows
+  //   back toward mono)
+  // • The state-evolution motion itself (the rate and tilt of the evolving
+  //   "activity" that drives the gentle pitch drift and the layer changes)
+  //
+  // computed as 1.0 - Math.pow(progress, collapseCurve).
+
   //   Short  (60-120s):  1.2-1.8 - begin descent early for perceptible arc
   //   Medium (120-300s): 1.5-2.5 - balanced matching/guiding phases
   //   Long   (300-600s): 2.0-3.5 - hold complexity, slow late convergence
-  //
-  // The absolute time spent in the transition phase matters more to the
-  // nervous system than the mathematical shape of the curve, so longer
-  // sessions get higher exponents automatically.
   //
   // TODO: Revisit collapse curve interaction with other parameters
   // (binaural delta band, FM/AM depth, voice count) for more nuanced
@@ -160,9 +187,13 @@ export function generateAudio(
   const stereoWidthLFO = new Float32Array(N);
   const SW_CENTRE = 0.7;
   const SW_DEPTH = 0.05;
-  for (let i = 0; i < N; i++) {
-    stereoWidthLFO[i] =
-      SW_CENTRE - SW_DEPTH * Math.sin(TWO_PI * breathRate * sampleTimes[i]);
+  if (enableStereoWidthLfo) {
+    for (let i = 0; i < N; i++) {
+      stereoWidthLFO[i] =
+        SW_CENTRE - SW_DEPTH * Math.sin(TWO_PI * breathRate * sampleTimes[i]);
+    }
+  } else {
+    stereoWidthLFO.fill(SW_CENTRE);
   }
 
   onProgress?.(10, "Breath + stereo LFO");
@@ -185,21 +216,26 @@ export function generateAudio(
   // Evolve 2-state vector
   const vState0 = new Float32Array(Nc); // "marked" dimension
   const vState1 = new Float32Array(Nc);
-  let state: [number, number] = stabilizeState([0, 1]);
-  vState0[0] = state[0];
-  vState1[0] = state[1];
 
-  for (let i = 1; i < Nc; i++) {
-    const thetaStep = (TWO_PI * (0.05 + 0.1 * convGainCtrl[i])) / CONTROL_HZ;
-    state = applyPhi(
-      [vState0[i - 1], vState1[i - 1]],
-      convGainCtrl[i],
-      thetaStep,
-      tiltAmplitude[i],
-    );
-    vState0[i] = state[0];
-    vState1[i] = state[1];
+  if (enableStateEvolution) {
+    let state: [number, number] = stabilizeState([0, 1]);
+    vState0[0] = state[0];
+    vState1[0] = state[1];
+
+    for (let i = 1; i < Nc; i++) {
+      const thetaStep = (TWO_PI * (0.05 + 0.1 * convGainCtrl[i])) / CONTROL_HZ;
+      state = applyPhi(
+        [vState0[i - 1], vState1[i - 1]],
+        convGainCtrl[i],
+        thetaStep,
+        tiltAmplitude[i],
+      );
+      vState0[i] = state[0];
+      vState1[i] = state[1];
+    }
   }
+  // When disabled, vState0/vState1 stay zeroed — activity is flat,
+  // no pitch drift, layers contribute evenly.
 
   // ── 9. Control → audio upsample ───────────────
   // Activity envelope: tanh mapping of marked state, low-pass filtered
@@ -268,11 +304,13 @@ export function generateAudio(
 
     // FM phase modulation for this layer (1-D cumsum)
     const phaseModL = new Float32Array(N);
-    let cumMod = 0;
-    for (let i = 0; i < N; i++) {
-      const fmL = Math.min(fmScale * convGain[i], 0.6);
-      cumMod += (TWO_PI * ctrlL[i] * fmL) / sampleRate;
-      phaseModL[i] = cumMod;
+    if (enableFm) {
+      let cumMod = 0;
+      for (let i = 0; i < N; i++) {
+        const fmL = Math.min(fmScale * convGain[i], 0.6);
+        cumMod += (TWO_PI * ctrlL[i] * fmL) / sampleRate;
+        phaseModL[i] = cumMod;
+      }
     }
 
     // Sum across voices (one voice at a time to save memory)
@@ -281,10 +319,16 @@ export function generateAudio(
     for (let v = 0; v < voices; v++) {
       const centV = cents[v];
       let phaseCum = phase0[v];
+      // Fixed detune: computed once per voice, avoids pow() in the hot loop
+      const fixedDf = Math.pow(2, centV / 1200.0);
 
       for (let i = 0; i < N; i++) {
         // Time-varying detune: 2^((cents/1200) * convergenceGain)
-        const df = Math.pow(2, (centV / 1200.0) * convGain[i]);
+        // converges voices to unison as convGain decays. When disabled,
+        // uses a fixed detune factor (same chorus width, no convergence).
+        const df = enableDetuneConvergence
+          ? Math.pow(2, (centV / 1200.0) * convGain[i])
+          : fixedDf;
         phaseCum += (TWO_PI * df * baseF[i] * layerDetune[ell]) / sampleRate;
 
         const totalPhase = phaseCum + driftPhase[i] + phaseModL[i];
@@ -431,8 +475,10 @@ export function generateAudio(
   // Stereo delay (48 samples ≈ 1.1 ms)
   const delaySamps = 48;
   const delayed = new Float32Array(N);
-  for (let i = delaySamps; i < N; i++) {
-    delayed[i] = mix[i - delaySamps];
+  if (enableHaasDelay) {
+    for (let i = delaySamps; i < N; i++) {
+      delayed[i] = mix[i - delaySamps];
+    }
   }
 
   // Compose L / R
@@ -533,6 +579,11 @@ export function generateAudio(
     finalL[i] *= gain;
     finalR[i] *= gain;
   }
+
+  const elapsed = performance.now() - t0;
+  console.log(
+    `[Phasefold] Generation complete: ${elapsed.toFixed(1)}ms (${dur}s @ ${sampleRate}Hz)`,
+  );
 
   onProgress?.(100, "Complete");
 

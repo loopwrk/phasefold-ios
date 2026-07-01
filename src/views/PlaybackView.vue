@@ -72,11 +72,13 @@ import { useI18n } from 'vue-i18n'
 import AppButton from '../components/Buttons/AppButton.vue'
 import AppIcon from '../components/Icons/AppIcon.vue'
 import { useAudioEngine } from '../composables/useAudioEngine'
+import { useDevFlags } from '../composables/useDevFlags'
 import { PRESETS } from '../data/presets'
 import { AUDIO_SR } from '../engine/types'
 import type { SynthParams } from '../engine/types'
 
 const { t } = useI18n()
+const { binauralEnabled, stereoWidthLfoEnabled, haasDelayEnabled, stateEvolutionEnabled, fmEnabled, detuneConvergenceEnabled } = useDevFlags()
 const route = useRoute()
 const router = useRouter()
 
@@ -165,10 +167,15 @@ function buildParams(key: string): SynthParams {
     fmIndex0: 1.6,
     amIndex0: 0.35,
     binauralDeltaHz0: p.binauralDeltaHz0,
-    binauralAmount: p.binauralAmount,
+    binauralAmount: binauralEnabled.value ? p.binauralAmount : 0,
     overtonePower: 1.3,
     voiceDelay: Math.min(30, Math.max(10, 0.08 * p.dur)),
     breathRate: p.breathRate,
+    enableStereoWidthLfo: stereoWidthLfoEnabled.value,
+    enableHaasDelay: haasDelayEnabled.value,
+    enableStateEvolution: stateEvolutionEnabled.value,
+    enableFm: fmEnabled.value,
+    enableDetuneConvergence: detuneConvergenceEnabled.value,
   }
 }
 

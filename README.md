@@ -63,6 +63,7 @@ Sessions are deterministic: the same preset and seed always produce identical au
 
 - Add more details to listed presets on the preset pages such as duration and frequency range
 - Refactor and update UI of 'custom' page
+- Consider extending 'collapse tone' upon convergence and/or longer fade-out
 - Optimise the audio engine by either rewriting it in Rust (or C) for WebAssembly or offloading it to a highly performent server
 - Rewrite the frontend in Flutter for Native iOS
 - Optimise colours for accessibility

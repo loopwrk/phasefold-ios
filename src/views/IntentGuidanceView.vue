@@ -47,6 +47,39 @@
           </div>
         </div>
 
+        <div class="dev-toggles">
+          <label class="dev-toggle">
+            <input type="checkbox" v-model="binauralEnabled" />
+            <span class="dev-toggle-label">Binaural beats</span>
+            <span class="dev-badge">DEV</span>
+          </label>
+          <label class="dev-toggle">
+            <input type="checkbox" v-model="stereoWidthLfoEnabled" />
+            <span class="dev-toggle-label">Stereo width LFO</span>
+            <span class="dev-badge">DEV</span>
+          </label>
+          <label class="dev-toggle">
+            <input type="checkbox" v-model="haasDelayEnabled" />
+            <span class="dev-toggle-label">Stereo delay (Haas)</span>
+            <span class="dev-badge">DEV</span>
+          </label>
+          <label class="dev-toggle">
+            <input type="checkbox" v-model="stateEvolutionEnabled" />
+            <span class="dev-toggle-label">State evolution (phi)</span>
+            <span class="dev-badge">DEV</span>
+          </label>
+          <label class="dev-toggle">
+            <input type="checkbox" v-model="fmEnabled" />
+            <span class="dev-toggle-label">FM synthesis</span>
+            <span class="dev-badge">DEV</span>
+          </label>
+          <label class="dev-toggle">
+            <input type="checkbox" v-model="detuneConvergenceEnabled" />
+            <span class="dev-toggle-label">Detune convergence</span>
+            <span class="dev-badge">DEV</span>
+          </label>
+        </div>
+
         <div class="nav-bar">
           <div class="step-dots">
             <span v-for="i in totalPages" :key="i" :class="['dot', { active: i - 1 === page }]" />
@@ -72,10 +105,12 @@ import AppIcon from '../components/Icons/AppIcon.vue'
 import PresetCard from '../components/Cards/PresetCard.vue'
 import { PRESETS, type Intent, type MindState } from '../data/presets'
 import { warmup } from '../engine/audioContext'
+import { useDevFlags } from '../composables/useDevFlags'
 
 const { t, tm } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { binauralEnabled, stereoWidthLfoEnabled, haasDelayEnabled, stateEvolutionEnabled, fmEnabled, detuneConvergenceEnabled } = useDevFlags()
 const intentSlug = computed(() => route.params.intent as string)
 
 // Page content definition: show icon?, body paragraphs, and optional
@@ -355,6 +390,40 @@ function advance() {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 8px;
+}
+
+.dev-toggles {
+  display: flex;
+  flex-direction: column;
+}
+
+.dev-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  font-size: 13px;
+  color: var(--cs-raised);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dev-toggle input {
+  accent-color: var(--cs-action);
+}
+
+.dev-toggle-label {
+  flex: 1;
+}
+
+.dev-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--cs-raised);
+  color: var(--cs-bg);
 }
 
 .slide-enter-active,
