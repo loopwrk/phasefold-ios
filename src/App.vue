@@ -3,8 +3,13 @@
     <div class="view-container">
       <router-view />
     </div>
+    <Analytics />
   </div>
 </template>
+
+<script setup lang="ts">
+import { Analytics } from '@vercel/analytics/vue'
+</script>
 
 <!-- Global resets -->
 <style>
