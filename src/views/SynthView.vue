@@ -19,7 +19,7 @@
       <!-- Core -->
       <div class="section">
         <div class="section-title">{{ t('synth.sections.core') }}</div>
-        <ParameterSlider :label="t('synth.params.duration')" v-model="p.dur" :min="60" :max="600" :step="1" suffix=" s"
+        <ParameterSlider :label="t('synth.params.duration')" v-model="p.dur" :min="60" :max="1800" :step="1" suffix=" s"
           @info="showInfo" />
         <ParameterSlider :label="t('synth.params.baseFrequency')" v-model="p.baseF0" :min="20" :max="220" :step="0.1"
           :suffix="` Hz (${noteName})`" @info="showInfo" />

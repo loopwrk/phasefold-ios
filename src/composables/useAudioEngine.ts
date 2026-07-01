@@ -69,11 +69,12 @@ export function useAudioEngine() {
 
     const ac = getAudioContext();
     const buf = ac.createBuffer(2, audio.left.length, audio.sampleRate);
-    // Float32Array from the worker may carry an ArrayBufferLike
-    // (SharedArrayBuffer-compatible type). copyToChannel requires a
-    // plain ArrayBuffer-backed Float32Array, so we wrap once here.
-    buf.copyToChannel(new Float32Array(audio.left), 0);
-    buf.copyToChannel(new Float32Array(audio.right), 1);
+    // The worker transfers plain ArrayBuffer-backed arrays; only the
+    // TS type widens to ArrayBufferLike. Cast instead of copying: the
+    // old defensive wrap duplicated the whole track (~318 MB/channel
+    // for a 30-minute session) just to satisfy the type-checker.
+    buf.copyToChannel(audio.left as Float32Array<ArrayBuffer>, 0);
+    buf.copyToChannel(audio.right as Float32Array<ArrayBuffer>, 1);
 
     cachedBuffer = buf;
     audioDuration = audio.left.length / audio.sampleRate;
