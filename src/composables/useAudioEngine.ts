@@ -1,106 +1,106 @@
 /**
- * Phasefold — Vue composable for audio generation + playback
+ * Phasefold: Vue composable for audio generation + playback
  *
- * Wraps the generator (via Web Worker) and Web Audio API into a
- * reactive interface.
- *
- * Generation runs in a dedicated Web Worker so the main thread
- * stays responsive regardless of track length.
+ * Generation runs in a dedicated Web Worker, which also encodes the
+ * final 16-bit WAV: the raw Float32 buffers never reach the main
+ * thread, halving peak memory for long sessions.
  *
  * Playback design:
- *   - AudioBuffer is created once per generation and cached.
- *     Scrubbing reuses the cached buffer to avoid per-scrub
- *     allocation (~53 MB for a 10 min stereo track at 44.1 kHz).
- *   - A monotonic playbackId counter disambiguates onended callbacks
- *     from stale source nodes (e.g. during rapid scrubbing) so that
- *     only the CURRENT source's natural end-of-track triggers state
- *     changes. Without this, a rapid scrub sequence can race:
- *     stop() → play() → stale onended fires → kills new playback.
- *   - playbackTime is clamped to [0, duration] in the tick loop
- *     so the scrubber never overshoots the buffer boundary.
- *   - startTime in play() is clamped so we never pass an out-of-range
- *     offset to source.start().
+ *   - The WAV is wrapped in a Blob and played through the shared
+ *     HTMLAudioElement (engine/audioElement.ts). iOS treats element
+ *     playback as media, so audio keeps playing when the phone is
+ *     locked, and the lock screen shows Media Session metadata with
+ *     working play/pause controls.
+ *   - isPlaying is driven by the element's play/pause/ended events
+ *     rather than assumed by this composable, so lock-screen and
+ *     control-centre actions stay in sync with the UI automatically.
+ *   - playbackTime reads el.currentTime at display refresh rate while
+ *     playing; because it reads the element's own clock, it
+ *     self-corrects after the page is backgrounded and resumed.
+ *   - The same Blob backs the WAV export, so export costs nothing.
  *
- * iOS note: AudioContext must be created / resumed inside a user-gesture
- * handler. The context is a shared singleton (engine/audioContext.ts).
- * Call warmup() from any tap handler BEFORE async work or navigation
- * so iOS unlocks the context while still in the gesture's call stack.
+ * iOS note: the element must be primed inside a user gesture before
+ * programmatic play() is allowed. Call warmupMedia() from any tap
+ * handler BEFORE async work or navigation (see audioElement.ts).
  */
 
-import { ref, shallowRef } from "vue";
-import type {
-  SynthParams,
-  StereoAudio,
-  WorkerRequest,
-  WorkerResponse,
-} from "../engine/types";
-import { getAudioContext } from "../engine/audioContext";
-import { encodeWav } from "../engine/wav";
+import { ref } from "vue";
+import type { SynthParams, WorkerRequest, WorkerResponse } from "../engine/types";
+import {
+  getAudioElement,
+  releasePrimeUrl,
+  setMediaSessionMetadata,
+} from "../engine/audioElement";
+
+export interface GeneratedTrack {
+  duration: number; // seconds
+  sampleRate: number;
+}
 
 export function useAudioEngine() {
-  let source: AudioBufferSourceNode | null = null;
-  let cachedBuffer: AudioBuffer | null = null;
+  let cachedBlob: Blob | null = null;
+  let mediaUrl: string | null = null;
   let audioDuration = 0;
   let animFrame = 0;
-  let startedAt = 0;
-  let startOffset = 0;
-  let playbackId = 0; // monotonic counter to identify the current source
   let activeWorker: Worker | null = null; // current generation worker
   let activeReject: ((reason: Error) => void) | null = null;
 
   const isPlaying = ref(false);
   const isGenerating = ref(false);
   const generationProgress = ref(0);
-  const currentAudio = shallowRef<StereoAudio | null>(null);
+  const hasAudio = ref(false);
   const playbackTime = ref(0);
 
   // ── helpers ──────────────────────────────────
 
+  /** Track playback position at display refresh rate. */
+  function startTicker(el: HTMLAudioElement) {
+    cancelAnimationFrame(animFrame);
+    const tick = () => {
+      if (!isPlaying.value) return;
+      playbackTime.value = Math.min(el.currentTime, audioDuration);
+      animFrame = requestAnimationFrame(tick);
+    };
+    tick();
+  }
+
   /**
-   * Build and cache an AudioBuffer from the current audio data.
-   * Called once after generation; subsequent play/scrub calls reuse
-   * the cached buffer.
+   * Keep reactive state in sync with the element. Assigned on every
+   * play() call so whichever view is active owns the handlers; the
+   * element itself is a shared singleton.
    */
-  function ensureBuffer(): AudioBuffer | null {
-    if (cachedBuffer) return cachedBuffer;
-
-    const audio = currentAudio.value;
-    if (!audio) return null;
-
-    const ac = getAudioContext();
-    const buf = ac.createBuffer(2, audio.left.length, audio.sampleRate);
-    // The worker transfers plain ArrayBuffer-backed arrays; only the
-    // TS type widens to ArrayBufferLike. Cast instead of copying: the
-    // old defensive wrap duplicated the whole track (~318 MB/channel
-    // for a 30-minute session) just to satisfy the type-checker.
-    buf.copyToChannel(audio.left as Float32Array<ArrayBuffer>, 0);
-    buf.copyToChannel(audio.right as Float32Array<ArrayBuffer>, 1);
-
-    cachedBuffer = buf;
-    audioDuration = audio.left.length / audio.sampleRate;
-    return buf;
+  function attachHandlers(el: HTMLAudioElement) {
+    el.onplay = () => {
+      isPlaying.value = true;
+      startTicker(el);
+    };
+    el.onpause = () => {
+      isPlaying.value = false;
+      cancelAnimationFrame(animFrame);
+    };
+    el.onended = () => {
+      isPlaying.value = false;
+      cancelAnimationFrame(animFrame);
+      playbackTime.value = audioDuration;
+    };
   }
 
   // ── public API ───────────────────────────────
 
   /**
    * Generate audio from parameters.
-   * Spawns a Web Worker, returns a promise that resolves with the
-   * generated StereoAudio. Progress is exposed via generationProgress ref.
+   * Spawns a Web Worker; resolves once the encoded track is ready for
+   * playback. Progress is exposed via the generationProgress ref.
    */
-  function generate(params: SynthParams): Promise<StereoAudio> {
+  function generate(params: SynthParams): Promise<GeneratedTrack> {
     // Cancel any in-flight generation before starting a new one
     cancelGeneration();
-
-    // Invalidate cached buffer from previous generation
-    cachedBuffer = null;
-    audioDuration = 0;
 
     // Set generating state AFTER cancelGeneration has cleared it
     isGenerating.value = true;
     generationProgress.value = 0;
 
-    return new Promise<StereoAudio>((resolve, reject) => {
+    return new Promise<GeneratedTrack>((resolve, reject) => {
       const worker = new Worker(
         new URL("../engine/audio.worker.ts", import.meta.url),
         { type: "module" },
@@ -118,18 +118,19 @@ export function useAudioEngine() {
             break;
 
           case "result": {
-            const audio: StereoAudio = {
-              left: msg.left,
-              right: msg.right,
-              sampleRate: msg.sampleRate,
-            };
-            currentAudio.value = audio;
+            cachedBlob = new Blob([msg.wav], { type: "audio/wav" });
+            if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+            releasePrimeUrl();
+            mediaUrl = URL.createObjectURL(cachedBlob);
+            audioDuration = msg.sampleCount / msg.sampleRate;
+
+            hasAudio.value = true;
             isGenerating.value = false;
             generationProgress.value = 100;
             activeWorker = null;
             activeReject = null;
             worker.terminate();
-            resolve(audio);
+            resolve({ duration: audioDuration, sampleRate: msg.sampleRate });
             break;
           }
 
@@ -160,59 +161,38 @@ export function useAudioEngine() {
 
   /** Start playback from startTime (seconds). */
   function play(startTime = 0) {
-    const buf = ensureBuffer();
-    if (!buf) return;
+    if (!mediaUrl) return;
 
-    stop(); // stop any existing playback
+    const el = getAudioElement();
+    attachHandlers(el);
 
-    // Clamp startTime to valid buffer range
+    if (el.src !== mediaUrl) {
+      el.src = mediaUrl;
+    }
+
+    // Clamp startTime to valid range; if at/past the end just position
+    // the scrubber there instead of playing a zero-length remainder.
     const safeStart = Math.max(0, Math.min(startTime, audioDuration - 0.01));
-
-    // If clamped start is at or past the end, just position the
-    // scrubber there without starting a source that would
-    // immediately fire onended.
-    if (safeStart >= audioDuration - 0.01) {
+    if (audioDuration > 0 && safeStart >= audioDuration - 0.01) {
       playbackTime.value = audioDuration;
       return;
     }
 
-    const ac = getAudioContext();
-    source = ac.createBufferSource();
-    source.buffer = buf;
-    source.connect(ac.destination);
-    source.start(0, safeStart);
-
-    startOffset = safeStart;
-    startedAt = ac.currentTime;
-    isPlaying.value = true;
-
-    const myId = ++playbackId;
-
-    source.onended = () => {
-      // Ignore if this callback came from a stale source that was
-      // replaced by a newer play() call (e.g. rapid scrubbing).
-      if (myId !== playbackId) return;
-
-      // Only act if playback wasn't already stopped manually.
-      // stop() sets isPlaying = false before calling source.stop(),
-      if (isPlaying.value) {
+    const seekAndPlay = () => {
+      el.currentTime = safeStart;
+      el.play().catch(() => {
+        // Rejected (e.g. element not primed by a gesture yet): leave
+        // the UI in the paused state; the user's next tap will work.
         isPlaying.value = false;
-        cancelAnimationFrame(animFrame);
-        playbackTime.value = audioDuration;
-      }
+      });
     };
 
-    // Track playback position at display refresh rate
-    const tick = () => {
-      if (!isPlaying.value) return;
-      if (myId !== playbackId) return; // stale tick from replaced source
-
-      const elapsed = startOffset + (ac.currentTime - startedAt);
-      playbackTime.value = Math.min(elapsed, audioDuration);
-
-      animFrame = requestAnimationFrame(tick);
-    };
-    tick();
+    // Seeking requires metadata; blob URLs load it near-instantly.
+    if (el.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      seekAndPlay();
+    } else {
+      el.onloadedmetadata = seekAndPlay;
+    }
   }
 
   /** Cancel an in-flight generation, terminating the worker immediately. */
@@ -230,33 +210,23 @@ export function useAudioEngine() {
     generationProgress.value = 0;
   }
 
-  /** Stop playback. */
+  /** Pause playback (position is kept; views reset playbackTime for a
+   *  full stop). */
   function stop() {
-    // Set isPlaying FIRST so that any subsequent onended callback
-    // from this source knows it was an explicit stop, not a
-    // natural end-of-track.
-    isPlaying.value = false;
-    cancelAnimationFrame(animFrame);
+    if (!mediaUrl) return;
+    getAudioElement().pause();
+  }
 
-    if (source) {
-      try {
-        source.stop();
-      } catch {
-        /* already stopped */
-      }
-      source.disconnect();
-      source = null;
-    }
+  /** Lock-screen title for the current track. */
+  function setNowPlaying(title: string) {
+    setMediaSessionMetadata(title);
   }
 
   /** Download the current audio as a 16-bit WAV. */
   function exportWav(filename = "phasefold-export.wav") {
-    const audio = currentAudio.value;
-    if (!audio) return;
+    if (!cachedBlob) return;
 
-    const buffer = encodeWav(audio.left, audio.right, audio.sampleRate);
-    const blob = new Blob([buffer], { type: "audio/wav" });
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(cachedBlob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
@@ -268,10 +238,7 @@ export function useAudioEngine() {
 
   /** Duration of current audio in seconds. */
   function getDuration(): number {
-    if (audioDuration > 0) return audioDuration;
-    const audio = currentAudio.value;
-    if (!audio) return 0;
-    return audio.left.length / audio.sampleRate;
+    return audioDuration;
   }
 
   return {
@@ -279,12 +246,13 @@ export function useAudioEngine() {
     cancelGeneration,
     play,
     stop,
+    setNowPlaying,
     exportWav,
     getDuration,
     isPlaying,
     isGenerating,
     generationProgress,
-    currentAudio,
+    hasAudio,
     playbackTime,
   };
 }

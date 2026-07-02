@@ -55,9 +55,13 @@ export type WorkerRequest = {
 export type WorkerResponse =
   | { type: "progress"; percent: number; section: string; elapsedMs?: number }
   | {
+      // The worker encodes the final 16-bit WAV itself so the raw
+      // Float32 buffers never cross into the main thread: the WAV is
+      // half their size and is what playback (blob URL) and export
+      // both consume.
       type: "result";
-      left: Float32Array;
-      right: Float32Array;
+      wav: ArrayBuffer;
+      sampleCount: number;
       sampleRate: number;
       elapsedMs?: number;
     }

@@ -75,8 +75,7 @@ function makeWorker(): Worker {
 }
 
 interface RunResult {
-  left: Float32Array
-  right: Float32Array
+  sampleCount: number
   totalMs: number
   wallMs: number
   sections: { name: string; ms: number }[]
@@ -106,7 +105,7 @@ function runGeneration(params: SynthParams, onSection?: (s: string) => void): Pr
           prev = m.at
         }
         worker.terminate()
-        resolve({ left: msg.left, right: msg.right, totalMs, wallMs, sections })
+        resolve({ sampleCount: msg.sampleCount, totalMs, wallMs, sections })
       } else {
         worker.terminate()
         reject(new Error(msg.message))
@@ -130,7 +129,7 @@ function deviceLine(): string {
 function fmtRun(wKey: string, r: RunResult): string {
   const lines = [
     `${WORKLOADS[wKey].label}`,
-    `  total: ${r.totalMs.toFixed(0)} ms (wall incl. transfer: ${r.wallMs.toFixed(0)} ms), output: ${(r.left.length / AUDIO_SR).toFixed(1)}s`,
+    `  total: ${r.totalMs.toFixed(0)} ms (wall incl. transfer: ${r.wallMs.toFixed(0)} ms), output: ${(r.sampleCount / AUDIO_SR).toFixed(1)}s`,
   ]
   for (const s of r.sections) {
     if (s.ms >= 0.5) lines.push(`    ${s.name.padEnd(28)} ${s.ms.toFixed(0)} ms`)

@@ -123,7 +123,7 @@ import { ref, reactive, computed, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import ParameterSlider from "../components/ParameterSlider.vue";
 import { useAudioEngine } from "../composables/useAudioEngine";
-import { warmup } from "../engine/audioContext";
+import { warmupMedia } from "../engine/audioElement";
 import { PRESETS, type PresetValues } from "../data/presets";
 import { freqToNoteName } from "../engine/dsp";
 import { AUDIO_SR } from "../engine/types";
@@ -135,12 +135,13 @@ const {
   generate,
   play: playAudio,
   stop: stopAudio,
+  setNowPlaying,
   exportWav,
   getDuration,
   isPlaying,
   isGenerating,
   generationProgress,
-  currentAudio,
+  hasAudio,
   playbackTime,
 } = useAudioEngine();
 
@@ -172,7 +173,6 @@ const infoText = ref("");
 
 // ── computed ───────────────────────────────────
 const presetNames = computed(() => Object.keys(PRESETS));
-const hasAudio = computed(() => currentAudio.value !== null);
 const duration = computed(() => getDuration());
 const noteName = computed(() => freqToNoteName(p.baseF0));
 const activeMindState = computed(
@@ -209,8 +209,9 @@ function buildParams(): SynthParams {
 }
 
 async function onGenerate() {
-  // Unlock AudioContext while still in the tap's call stack (iOS requirement)
-  warmup();
+  // Prime the audio element while still in the tap's call stack
+  // (iOS requires a gesture-blessed element for later play() calls)
+  warmupMedia();
 
   // Stop any current playback and reset scrubber
   stopAudio();
@@ -226,9 +227,9 @@ async function onGenerate() {
   });
 
   try {
-    const audio = await generate(buildParams());
-    const dur = audio.left.length / audio.sampleRate;
-    status.value = t('synth.status.generated', { dur: dur.toFixed(1), rate: audio.sampleRate });
+    const track = await generate(buildParams());
+    setNowPlaying(currentPreset.value);
+    status.value = t('synth.status.generated', { dur: track.duration.toFixed(1), rate: track.sampleRate });
   } catch (e: any) {
     status.value = t('synth.status.error', { message: e.message });
   } finally {

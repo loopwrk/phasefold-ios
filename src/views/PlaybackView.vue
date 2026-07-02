@@ -87,10 +87,11 @@ const {
   cancelGeneration,
   play: playAudio,
   stop: stopAudio,
+  setNowPlaying,
   isPlaying,
   isGenerating,
   generationProgress,
-  currentAudio,
+  hasAudio,
   playbackTime,
   getDuration,
 } = useAudioEngine()
@@ -103,7 +104,6 @@ const displayName = computed(() => {
   const afterDash = dashIdx > 0 ? key.slice(dashIdx + 3) : key
   return afterDash.replace(/\s*\([^)]+\)$/, '')
 })
-const hasAudio = computed(() => currentAudio.value !== null)
 const showTitle = computed(() => !hasAudio.value)
 const isFinished = computed(() => {
   if (!hasAudio.value) return false
@@ -214,6 +214,7 @@ onMounted(async () => {
 
   try {
     await generate(buildParams(key))
+    setNowPlaying(displayName.value)
     playAudio()
   } catch {
     // Generation failed - controls remain disabled

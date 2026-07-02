@@ -47,7 +47,7 @@
           </div>
         </div>
 
-        <div class="dev-toggles">
+        <div v-if="isDev" class="dev-toggles">
           <label class="dev-toggle">
             <input type="checkbox" v-model="binauralEnabled" />
             <span class="dev-toggle-label">Binaural beats</span>
@@ -104,7 +104,7 @@ import AppButton from '../components/Buttons/AppButton.vue'
 import AppIcon from '../components/Icons/AppIcon.vue'
 import PresetCard from '../components/Cards/PresetCard.vue'
 import { PRESETS, type Intent, type MindState } from '../data/presets'
-import { warmup } from '../engine/audioContext'
+import { warmupMedia } from '../engine/audioElement'
 import { useDevFlags } from '../composables/useDevFlags'
 
 const { t, tm } = useI18n()
@@ -112,6 +112,11 @@ const route = useRoute()
 const router = useRouter()
 const { binauralEnabled, stereoWidthLfoEnabled, haasDelayEnabled, stateEvolutionEnabled, fmEnabled, detuneConvergenceEnabled } = useDevFlags()
 const intentSlug = computed(() => route.params.intent as string)
+
+// Engine feature toggles are a development tool only: Vite replaces
+// import.meta.env.DEV with false in production builds, so the block
+// never renders on deployed sites.
+const isDev = import.meta.env.DEV
 
 // Page content definition: show icon?, body paragraphs, and optional
 // text modifier. Driven entirely by the locale JSON.
@@ -213,9 +218,10 @@ const intentPresets = computed(() => {
 })
 
 function selectPreset(presetKey: string) {
-  // Unlock the AudioContext now, while still in the tap's call stack.
-  // PlaybackView will reuse this same context after navigation.
-  warmup()
+  // Prime the shared audio element now, while still in the tap's call
+  // stack: iOS only allows programmatic play() on a gesture-blessed
+  // element. PlaybackView reuses the same element after navigation.
+  warmupMedia()
   router.push({ name: 'playback', params: { preset: presetKey } })
 }
 

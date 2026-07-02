@@ -1,16 +1,16 @@
 /**
  * Phasefold — Audio generation Web Worker
  *
- * Runs generateAudio() off the main thread so the UI stays responsive.
+ * Runs generateAudio() off the main thread so the UI stays responsive,
+ * then encodes the 16-bit WAV here as well: encoding a long track on
+ * the main thread would jank the UI for seconds, and shipping the WAV
+ * instead of raw Float32 buffers halves the transferred payload.
  * Communicates via the WorkerRequest / WorkerResponse protocol defined
- * in types.ts.
- *
- * Progress is reported after each major DSP section (dev console only).
- * The final Float64Array buffers are transferred (zero-copy) back to
- * the main thread.
+ * in types.ts. The WAV ArrayBuffer is transferred (zero-copy).
  */
 
 import { generateAudio } from "./generator";
+import { encodeWav } from "./wav";
 import type { WorkerRequest, WorkerResponse } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,15 +42,26 @@ worker.onmessage = (e: MessageEvent<WorkerRequest>) => {
       worker.postMessage(msg);
     });
 
-    // Transfer the underlying ArrayBuffers (zero-copy)
+    const encodeMark: WorkerResponse = {
+      type: "progress",
+      percent: 100,
+      section: "Encoding WAV",
+      elapsedMs: performance.now() - t0,
+    };
+    worker.postMessage(encodeMark);
+
+    const wav = encodeWav(audio.left, audio.right, audio.sampleRate);
+
+    // Transfer the WAV buffer (zero-copy); the Float32 buffers die
+    // with this worker.
     const msg: WorkerResponse = {
       type: "result",
-      left: audio.left,
-      right: audio.right,
+      wav,
+      sampleCount: audio.left.length,
       sampleRate: audio.sampleRate,
       elapsedMs: performance.now() - t0,
     };
-    worker.postMessage(msg, [audio.left.buffer, audio.right.buffer]);
+    worker.postMessage(msg, [wav]);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const msg: WorkerResponse = { type: "error", message };
